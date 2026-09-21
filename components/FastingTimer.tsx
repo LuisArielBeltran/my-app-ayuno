@@ -1,27 +1,80 @@
-// components/FastingTimer.tsx
 'use client';
-
 import { useState, useEffect } from 'react';
 
 export default function FastingTimer({ protocolHours = 16 }) {
-  const [timeLeft, setTimeLeft] = useState(protocolHours * 60 * 60);
+  const [timeLeft, setTimeLeft] = useState(protocolHours * 3600);
   const [isActive, setIsActive] = useState(false);
+  const [startTime, setStartTime] = useState<string | null>(null);
 
+  // 1. Recuperar el estado de ayuno de la base de datos
+  useEffect(() => {
+    const fetchFasting = async () => {
+      const email = localStorage.getItem('user_email');
+      if (!email) return;
+
+      try {
+        const res = await fetch(`/api/fasting?email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+        
+        if (data.state && data.state.is_fasting && data.state.start_time) {
+          setIsActive(true);
+          setStartTime(data.state.start_time);
+          
+          // Calcular el tiempo restante exacto basado en la hora en que empezó
+          const start = new Date(data.state.start_time).getTime();
+          const now = new Date().getTime();
+          const elapsedSeconds = Math.floor((now - start) / 1000);
+          const totalTargetSeconds = protocolHours * 3600;
+          
+          const remaining = totalTargetSeconds - elapsedSeconds;
+          setTimeLeft(remaining > 0 ? remaining : 0);
+        }
+      } catch (error) {
+        console.error('Error cargando ayuno:', error);
+      }
+    };
+    fetchFasting();
+  }, [protocolHours]);
+
+  // 2. Motor del cronómetro local
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
-    } else if (timeLeft === 0) {
+    } else if (timeLeft <= 0) {
       setIsActive(false);
     }
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
-  const toggleTimer = () => setIsActive(!isActive);
+  // 3. Iniciar/Detener ayuno y notificar a PostgreSQL
+  const toggleTimer = async () => {
+    const newState = !isActive;
+    const newStartTime = newState ? new Date().toISOString() : null;
+    const email = localStorage.getItem('user_email') || 'usuario@demo.com';
+    
+    setIsActive(newState);
+    setStartTime(newStartTime);
+    setTimeLeft(protocolHours * 3600);
 
-  // Formato HH:MM:SS
+    try {
+      await fetch('/api/fasting', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          isFasting: newState,
+          startTime: newStartTime,
+          targetHours: protocolHours
+        }),
+      });
+    } catch (err) {
+      console.error('Error guardando en la nube:', err);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -35,7 +88,6 @@ export default function FastingTimer({ protocolHours = 16 }) {
     <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl shadow-lg w-full max-w-sm mx-auto">
       <h2 className="text-xl font-bold text-gray-800 mb-4">Protocolo {protocolHours}/{24 - protocolHours}</h2>
       
-      {/* Círculo de Progreso */}
       <div className="relative w-48 h-48 rounded-full border-8 border-gray-100 flex items-center justify-center mb-6">
         <div 
           className="absolute top-0 left-0 w-full h-full rounded-full border-8 border-green-500 transition-all duration-1000"
