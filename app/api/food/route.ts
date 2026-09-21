@@ -10,18 +10,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    const client = await pool.connect();
-    
-    // Usamos DISTINCT para evitar duplicados si hay nombres parecidos
-    const result = await client.query(
+    // pool.query abre y cierra la conexión automáticamente de forma segura
+    const result = await pool.query(
       `SELECT DISTINCT ON (food_name) * FROM food_database 
        WHERE food_name ILIKE $1 
        LIMIT 10`,
       [`%${query}%`]
     );
     
-    client.release();
-
     return NextResponse.json({ foods: result.rows });
   } catch (error: any) {
     console.error('Error buscando alimentos:', error);
