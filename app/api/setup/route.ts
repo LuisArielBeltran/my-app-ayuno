@@ -12,9 +12,11 @@ export async function GET() {
       );
     `);
 
-    // 2. Tabla de Registro de Agua
+    // 2. CORRECCIÓN: Destruir la tabla vieja de agua y crear la nueva
+    await pool.query(`DROP TABLE IF EXISTS water_log CASCADE;`);
+    
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS water_log (
+      CREATE TABLE water_log (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) NOT NULL,
         glasses INT DEFAULT 0,
@@ -35,7 +37,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: "¡Tablas para la versión Full creadas con éxito! Ya no dependemos del panel de Railway." 
+      message: "¡Tabla de agua purgada y recreada! Las demás tablas siguen intactas." 
     });
   } catch (error: any) {
     console.error('Error creando las tablas:', error);
