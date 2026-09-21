@@ -40,6 +40,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error poblando la base de datos:', error);
-    return NextResponse.json({ success: false, error: 'Error interno al poblar la BD' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message || 'Error desconocido' 
+    }, { status: 500 });
   }
 }
