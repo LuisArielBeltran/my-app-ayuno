@@ -3,50 +3,53 @@ import pool from '@/lib/db';
 
 export async function GET() {
   try {
-    const client = await pool.connect();
+    // Usamos pool.query directo para evitar que Railway se bloquee si hay un error
 
-    // 1. Crear tabla de Usuarios
-    await client.query(`
+    // 1. Tabla de Usuarios
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          email VARCHAR(255) UNIQUE NOT NULL,
-          name VARCHAR(100),
-          level_assigned VARCHAR(50) CHECK (level_assigned IN ('Principiante', 'Intermedio', 'Avanzado')),
-          protocol_selected VARCHAR(20) CHECK (protocol_selected IN ('12/12', '16/8', '20/4')),
-          fasting_start_time TIMESTAMP,
-          water_target_ml INTEGER DEFAULT 2500,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
-    // 2. Crear tabla de Alimentos
-    await client.query(`
+    // 2. Tabla de Alimentos (tu estructura original)
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS food_database (
-          id SERIAL PRIMARY KEY,
-          food_name VARCHAR(150) NOT NULL,
-          breaks_fast BOOLEAN NOT NULL,
-          category VARCHAR(50),
-          explanation TEXT,
-          icon_url VARCHAR(255)
+        id SERIAL PRIMARY KEY,
+        food_name VARCHAR(150) NOT NULL,
+        breaks_fast BOOLEAN NOT NULL,
+        category VARCHAR(50),
+        explanation TEXT,
+        icon_url VARCHAR(255)
       );
     `);
 
-    // 3. Crear tabla de Hidratación
-    await client.query(`
+    // 3. Tabla de Hidratación (Adaptada para vincularse por email)
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS water_log (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-          log_date DATE DEFAULT CURRENT_DATE,
-          volume_ml INTEGER DEFAULT 250,
-          logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        glasses INT DEFAULT 0,
+        log_date DATE DEFAULT CURRENT_DATE
       );
     `);
 
-    client.release();
+    // 4. Tabla de Estado de Ayuno (Nueva para el cronómetro)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS fasting_state (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        is_fasting BOOLEAN DEFAULT FALSE,
+        start_time TIMESTAMP,
+        target_hours INT DEFAULT 16
+      );
+    `);
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Las tablas se crearon correctamente evadiendo el bloqueo de Railway.' 
+      message: '¡Tablas creadas y alineadas con la versión Full exitosamente!' 
     });
   } catch (error: any) {
     console.error('Error creando tablas:', error);
