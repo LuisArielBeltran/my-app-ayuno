@@ -5,12 +5,9 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   },
-  max: 3, // Limita las conexiones simultáneas para que Railway no sufra bloqueos
+  max: 3,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 });
 
 export default pool;
-
-
-
