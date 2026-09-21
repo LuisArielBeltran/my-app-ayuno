@@ -1,4 +1,3 @@
-// app/api/seed/route.ts
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
@@ -38,11 +37,11 @@ export async function GET() {
       success: true, 
       message: `Se insertaron ${initialFoods.length} alimentos correctamente en PostgreSQL.` 
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error poblando la base de datos:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error.message || 'Error desconocido' 
+      error: error.message || 'Error de conexión desconocido' 
     }, { status: 500 });
   }
 }
