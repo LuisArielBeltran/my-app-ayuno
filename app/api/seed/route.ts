@@ -21,17 +21,21 @@ const initialFoods = [
 export async function GET() {
   try {
     for (const food of initialFoods) {
-      await pool.query(
-        `INSERT INTO food_database (food_name, breaks_fast, category, explanation) 
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT DO NOTHING`,
-        [food.name, food.breaksFast, food.category, food.explanation]
-      );
+      // Verificamos si el alimento ya existe para evitar duplicados
+      const check = await pool.query('SELECT id FROM food_database WHERE food_name = $1', [food.name]);
+      
+      if (check.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO food_database (food_name, breaks_fast, category, explanation) 
+           VALUES ($1, $2, $3, $4)`,
+          [food.name, food.breaksFast, food.category, food.explanation]
+        );
+      }
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: `Se insertaron ${initialFoods.length} alimentos correctamente en PostgreSQL.` 
+      message: `Se verificaron e insertaron ${initialFoods.length} alimentos correctamente.` 
     });
   } catch (error: any) {
     console.error('Error poblando la base de datos:', error);
