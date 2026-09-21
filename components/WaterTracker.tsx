@@ -1,27 +1,46 @@
-// components/WaterTracker.tsx
 'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function WaterTracker() {
   const [glasses, setGlasses] = useState(0);
-  const dailyGoal = 8; // Meta: 8 vasos de 250ml (2 litros)
+  const dailyGoal = 8;
   const glassVolume = 250;
 
+  // 1. Cargar el registro desde la nube al abrir la app
+  useEffect(() => {
+    const fetchWater = async () => {
+      const email = localStorage.getItem('user_email');
+      if (!email) return; // Si no hay usuario, no busca
+
+      try {
+        const res = await fetch(`/api/water?email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+        if (data.glasses !== undefined) {
+          setGlasses(data.glasses);
+        }
+      } catch (error) {
+        console.error('Error al cargar agua:', error);
+      }
+    };
+    fetchWater();
+  }, []);
+
+  // 2. Guardar en PostgreSQL al sumar un vaso
   const handleAddGlass = async () => {
     if (glasses < dailyGoal) {
       const newCount = glasses + 1;
-      setGlasses(newCount);
+      setGlasses(newCount); // Actualiza la pantalla instantáneamente
+
+      const email = localStorage.getItem('user_email') || 'usuario@demo.com';
 
       try {
-        // Llamada a tu API (en el futuro aquí pasaremos el userId real)
         await fetch('/api/water', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ volumeMl: glassVolume, userId: null }), 
+          body: JSON.stringify({ email, glasses: newCount }), 
         });
       } catch (error) {
-        console.error("Error al guardar el vaso de agua", error);
+        console.error("Error al guardar en la nube", error);
       }
     }
   };
@@ -37,7 +56,6 @@ export default function WaterTracker() {
         </span>
       </div>
 
-      {/* Barra de progreso global */}
       <div className="w-full bg-blue-100 rounded-full h-2.5 mb-6">
         <div 
           className="bg-blue-500 h-2.5 rounded-full transition-all duration-500" 
@@ -45,7 +63,6 @@ export default function WaterTracker() {
         ></div>
       </div>
 
-      {/* Grid interactivo de vasos */}
       <div className="grid grid-cols-4 gap-4 justify-items-center">
         {Array.from({ length: dailyGoal }).map((_, index) => {
           const isFilled = index < glasses;
@@ -60,7 +77,6 @@ export default function WaterTracker() {
                   : 'border-blue-200 hover:border-blue-300 active:scale-95'
               }`}
             >
-              {/* Líquido animado dentro del vaso */}
               <div 
                 className={`absolute bottom-0 w-full bg-blue-500 transition-all duration-500 ${
                   isFilled ? 'h-full' : 'h-0'
