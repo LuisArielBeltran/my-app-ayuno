@@ -10,15 +10,28 @@ export async function GET(request: Request) {
   }
 
   try {
-    // pool.query abre y cierra la conexión automáticamente de forma segura
+    // Buscamos todas las coincidencias
     const result = await pool.query(
-      `SELECT DISTINCT ON (food_name) * FROM food_database 
-       WHERE food_name ILIKE $1 
-       LIMIT 10`,
+      `SELECT * FROM food_database WHERE food_name ILIKE $1`,
       [`%${query}%`]
     );
     
-    return NextResponse.json({ foods: result.rows });
+    // Filtro antibalística: Eliminamos cualquier duplicado exacto
+    const uniqueFoods: any[] = [];
+    const seenNames = new Set();
+    
+    for (const food of result.rows) {
+      // Convertimos a minúsculas y quitamos espacios extra para asegurar que sean idénticos
+      const normalizedName = food.food_name.toLowerCase().trim();
+      
+      if (!seenNames.has(normalizedName)) {
+        seenNames.add(normalizedName);
+        uniqueFoods.push(food);
+      }
+    }
+
+    // Solo devolvemos un máximo de 10 resultados únicos a la pantalla
+    return NextResponse.json({ foods: uniqueFoods.slice(0, 10) });
   } catch (error: any) {
     console.error('Error buscando alimentos:', error);
     return NextResponse.json({ error: 'Error interno en la búsqueda' }, { status: 500 });
