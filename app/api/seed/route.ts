@@ -20,18 +20,14 @@ const initialFoods = [
 
 export async function GET() {
   try {
-    const client = await pool.connect();
-
     for (const food of initialFoods) {
-      await client.query(
+      await pool.query(
         `INSERT INTO food_database (food_name, breaks_fast, category, explanation) 
          VALUES ($1, $2, $3, $4)
          ON CONFLICT DO NOTHING`,
         [food.name, food.breaksFast, food.category, food.explanation]
       );
     }
-
-    client.release();
 
     return NextResponse.json({ 
       success: true, 
