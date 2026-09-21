@@ -12,9 +12,9 @@ export async function GET(request: Request) {
   try {
     const client = await pool.connect();
     
-    // ILIKE busca coincidencias parciales ignorando mayúsculas/minúsculas
+    // Usamos DISTINCT para evitar duplicados si hay nombres parecidos
     const result = await client.query(
-      `SELECT * FROM food_database 
+      `SELECT DISTINCT ON (food_name) * FROM food_database 
        WHERE food_name ILIKE $1 
        LIMIT 10`,
       [`%${query}%`]
