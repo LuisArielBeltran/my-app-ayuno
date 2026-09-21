@@ -4,6 +4,7 @@ import FoodSearch from '@/components/FoodSearch';
 import WaterTracker from '@/components/WaterTracker';
 import UserProfile from '@/components/UserProfile';
 import InstructionsModal from '@/components/InstructionsModal';
+import UserDashboard from '@/components/UserDashboard';
 
 export default function Home() {
   return (
@@ -18,8 +19,11 @@ export default function Home() {
         {/* 0. Identificación del usuario */}
         <UserProfile />
 
-        {/* 1. Cronómetro de Ayuno */}
-        <FastingTimer protocolHours={16} />
+        {/* Panel de Estadísticas (NUEVO) */}
+        <UserDashboard />
+
+        {/* 1. Cronómetro de Ayuno (Sin parámetro, maneja sus horas solo) */}
+        <FastingTimer />
 
         {/* 2. Buscador Inteligente de Alimentos */}
         <FoodSearch />
