@@ -6,6 +6,7 @@ import UserProfile from '@/components/UserProfile';
 import InstructionsModal from '@/components/InstructionsModal';
 import UserDashboard from '@/components/UserDashboard';
 import RecipeGuide from '@/components/RecipeGuide';
+import MoodTracker from '@/components/MoodTracker';
 
 export default function Home() {
   return (
@@ -17,22 +18,15 @@ export default function Home() {
           <p className="text-sm text-gray-500 mt-1">Ecosistema Nutricional Integral</p>
         </header>
 
-        {/* Identificación del usuario */}
         <UserProfile />
-
-        {/* Panel de Estadísticas */}
         <UserDashboard />
-
-        {/* Cronómetro de Ayuno */}
         <FastingTimer />
-
-        {/* Recetario Inteligente (NUEVO) */}
         <RecipeGuide />
-
-        {/* Buscador Inteligente de Alimentos */}
+        
+        {/* Diario Biológico (NUEVO) */}
+        <MoodTracker />
+        
         <FoodSearch />
-
-        {/* Rastreador de Hidratación */}
         <WaterTracker />
       </div>
     </main>
