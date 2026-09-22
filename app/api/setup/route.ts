@@ -3,7 +3,6 @@ import pool from '@/lib/db';
 
 export async function GET() {
   try {
-    // 1. Usuarios
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -12,9 +11,9 @@ export async function GET() {
       );
     `);
 
-    // 2. Agua
+    await pool.query(`DROP TABLE IF EXISTS water_log CASCADE;`);
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS water_log (
+      CREATE TABLE water_log (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) NOT NULL,
         glasses INT DEFAULT 0,
@@ -22,7 +21,6 @@ export async function GET() {
       );
     `);
 
-    // 3. Ayuno
     await pool.query(`
       CREATE TABLE IF NOT EXISTS fasting_state (
         id SERIAL PRIMARY KEY,
@@ -33,7 +31,6 @@ export async function GET() {
       );
     `);
 
-    // 4. NUEVO: Tabla de Recetas
     await pool.query(`
       CREATE TABLE IF NOT EXISTS recipes (
         id SERIAL PRIMARY KEY,
@@ -50,7 +47,6 @@ export async function GET() {
       );
     `);
 
-    // 5. NUEVO: Registro de Comidas
     await pool.query(`
       CREATE TABLE IF NOT EXISTS meal_log (
         id SERIAL PRIMARY KEY,
@@ -62,12 +58,24 @@ export async function GET() {
       );
     `);
 
+    // NUEVO: Tabla de Estado de Ánimo
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS mood_log (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        mood_score INT NOT NULL,
+        energy_level INT NOT NULL,
+        symptoms TEXT,
+        log_date DATE DEFAULT CURRENT_DATE,
+        UNIQUE(email, log_date)
+      );
+    `);
+
     return NextResponse.json({ 
       success: true, 
-      message: "¡Estructura de la base de datos Full actualizada con éxito!" 
+      message: "¡Base de datos actualizada con el módulo de Estado de Ánimo!" 
     });
   } catch (error: any) {
-    console.error('Error creando tablas:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
