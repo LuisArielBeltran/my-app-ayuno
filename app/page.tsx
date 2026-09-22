@@ -1,4 +1,3 @@
-// app/page.tsx
 import FastingTimer from '@/components/FastingTimer';
 import FoodSearch from '@/components/FoodSearch';
 import WaterTracker from '@/components/WaterTracker';
@@ -26,16 +25,12 @@ export default function Home() {
         <FastingTimer />
         <RecipeGuide />
         <MoodTracker />
-        
-        {/* Círculos Sociales (NUEVO) */}
         <CommunityCircles />
-
         <LearningCenter />
+        
         <FoodSearch />
         <WaterTracker />
       </div>
     </main>
   );
 }
-
-
