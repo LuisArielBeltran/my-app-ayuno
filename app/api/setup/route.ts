@@ -58,7 +58,6 @@ export async function GET() {
       );
     `);
 
-    // NUEVO: Tabla de Estado de Ánimo
     await pool.query(`
       CREATE TABLE IF NOT EXISTS mood_log (
         id SERIAL PRIMARY KEY,
@@ -71,9 +70,21 @@ export async function GET() {
       );
     `);
 
+    // NUEVO: Tabla de Comunidad
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS community_posts (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        protocol VARCHAR(50) DEFAULT '16/8',
+        message TEXT NOT NULL,
+        likes INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     return NextResponse.json({ 
       success: true, 
-      message: "¡Base de datos actualizada con el módulo de Estado de Ánimo!" 
+      message: "¡Base de datos actualizada con los Círculos Sociales!" 
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
