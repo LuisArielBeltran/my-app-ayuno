@@ -13,13 +13,12 @@ export async function GET() {
       );
     `);
 
-    await pool.query(`DROP TABLE IF EXISTS water_log CASCADE;`);
     await pool.query(`
-      CREATE TABLE water_log (
+      CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        email VARCHAR(255) NOT NULL,
-        glasses INT DEFAULT 0,
-        log_date DATE DEFAULT CURRENT_DATE
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
