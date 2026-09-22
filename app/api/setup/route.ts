@@ -70,7 +70,6 @@ export async function GET() {
       );
     `);
 
-    // NUEVO: Tabla de Comunidad
     await pool.query(`
       CREATE TABLE IF NOT EXISTS community_posts (
         id SERIAL PRIMARY KEY,
@@ -82,9 +81,20 @@ export async function GET() {
       );
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS learning_articles (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(200) NOT NULL,
+        summary TEXT NOT NULL,
+        content TEXT NOT NULL,
+        read_time INT NOT NULL,
+        category VARCHAR(50) NOT NULL
+      );
+    `);
+
     return NextResponse.json({ 
       success: true, 
-      message: "¡Base de datos actualizada con los Círculos Sociales!" 
+      message: "¡Base de datos actualizada con TODOS los módulos!" 
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
