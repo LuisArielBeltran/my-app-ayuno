@@ -8,6 +8,7 @@ import UserDashboard from '@/components/UserDashboard';
 import RecipeGuide from '@/components/RecipeGuide';
 import MoodTracker from '@/components/MoodTracker';
 import LearningCenter from '@/components/LearningCenter';
+import CommunityCircles from '@/components/CommunityCircles';
 
 export default function Home() {
   return (
@@ -21,15 +22,15 @@ export default function Home() {
 
         <UserProfile />
         <UserDashboard />
+        
         <FastingTimer />
         <RecipeGuide />
-        
-        {/* Diario Biológico */}
         <MoodTracker />
-
-        {/* Academia del Ayuno (NUEVO) */}
-        <LearningCenter />
         
+        {/* Círculos Sociales (NUEVO) */}
+        <CommunityCircles />
+
+        <LearningCenter />
         <FoodSearch />
         <WaterTracker />
       </div>
