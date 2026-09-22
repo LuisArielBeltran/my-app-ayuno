@@ -7,6 +7,7 @@ import InstructionsModal from '@/components/InstructionsModal';
 import UserDashboard from '@/components/UserDashboard';
 import RecipeGuide from '@/components/RecipeGuide';
 import MoodTracker from '@/components/MoodTracker';
+import LearningCenter from '@/components/LearningCenter';
 
 export default function Home() {
   return (
@@ -23,8 +24,11 @@ export default function Home() {
         <FastingTimer />
         <RecipeGuide />
         
-        {/* Diario Biológico (NUEVO) */}
+        {/* Diario Biológico */}
         <MoodTracker />
+
+        {/* Academia del Ayuno (NUEVO) */}
+        <LearningCenter />
         
         <FoodSearch />
         <WaterTracker />
