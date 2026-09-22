@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'; // <--- ESTO DESTRUYE EL CACHÉ
+
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
@@ -100,5 +102,3 @@ export async function GET() {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-
-
