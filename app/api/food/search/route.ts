@@ -7,9 +7,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q') || '';
 
+    // Si no hay texto escrito, devolvemos un arreglo vacío (no muestra resultados automáticos)
     if (!query.trim()) {
-      const allFoods = await pool.query('SELECT * FROM food_database ORDER BY food_name ASC');
-      return NextResponse.json({ success: true, results: allFoods.rows });
+      return NextResponse.json({ success: true, results: [] });
     }
 
     // Búsqueda insensible a mayúsculas por nombre o sinónimos
