@@ -56,9 +56,9 @@ export default function OnboardingPage() {
       
       if (data.success) {
         setTimeout(() => {
-          // Redirigir al registro para que establezca su contraseña segura, 
-          // llevando ya precargado su correo del onboarding
-          router.push(`/register?email=${encodeURIComponent(formData.email)}`);
+          // Redirigir a la pasarela de pago (Checkout) cumpliendo tu regla comercial:
+          // ¡Primero paga, luego crea su contraseña para entrar al tablero!
+          router.push(`/checkout?email=${encodeURIComponent(formData.email)}`);
         }, 3000);
       } else {
         alert('Error al guardar los datos: ' + data.error);
@@ -207,7 +207,7 @@ export default function OnboardingPage() {
                   />
                 </div>
                 <button onClick={nextStep} disabled={!formData.email || !formData.email.includes('@')} className="w-full bg-indigo-600 text-white font-bold text-lg py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg">
-                  Generar mi plan personalizado
+                  Ver mi Plan Personalizado 🚀
                 </button>
               </div>
             </div>
