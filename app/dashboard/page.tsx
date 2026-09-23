@@ -11,6 +11,7 @@ function DashboardContent() {
   // Estados interactivos para el cronómetro y el agua
   const [isFasting, setIsFasting] = useState(false);
   const [fastingSeconds, setFastingSeconds] = useState(0);
+  const [targetHours, setTargetHours] = useState<number>(16); // NUEVO: Estado para el tipo de ayuno
   const [waterGlasses, setWaterGlasses] = useState(3);
   const [fastingStreak, setFastingStreak] = useState(3); // Racha simulada o calculada
 
@@ -19,8 +20,8 @@ function DashboardContent() {
   const [foodResults, setFoodResults] = useState<any[]>([]);
   const [loadingFood, setLoadingFood] = useState(false);
 
-  // Estado del Coach Metabólico
-  const [currentTip, setCurrentTip] = useState<any>(null);
+  // Estado del Coach Metabólico (Ahora en tiempo real)
+  const [currentTip, setCurrentTip] = useState<{phase: string, title: string, content: string} | null>(null);
 
   // Estados de Seguimiento de Peso y Metas
   const [weightHistory, setWeightHistory] = useState<any[]>([]);
@@ -37,6 +38,9 @@ function DashboardContent() {
         const fastingData = await fastingRes.json();
         if (fastingData.success && fastingData.fasting.is_fasting && fastingData.fasting.start_time) {
           setIsFasting(true);
+          if (fastingData.fasting.target_hours) {
+            setTargetHours(fastingData.fasting.target_hours);
+          }
           const start = new Date(fastingData.fasting.start_time).getTime();
           const now = new Date().getTime();
           const elapsedSeconds = Math.floor((now - start) / 1000);
@@ -71,23 +75,62 @@ function DashboardContent() {
     return () => clearInterval(interval);
   }, [isFasting]);
 
-  // Obtener consejo de coaching según las horas actuales de ayuno
+  // Cerebro del Coach Metabólico (En tiempo real basado en reloj y meta)
   useEffect(() => {
-    const fetchCoachingTip = async () => {
-      const currentHours = Math.floor(fastingSeconds / 3600);
-      try {
-        const res = await fetch(`/api/coaching/tips?hours=${currentHours}`);
-        const data = await res.json();
-        if (data.success && data.tip) {
-          setCurrentTip(data.tip);
-        }
-      } catch (err) {
-        console.error('Error obteniendo tip de coaching:', err);
-      }
-    };
+    if (!isFasting) {
+      setCurrentTip({
+        phase: "Preparación",
+        title: "Listo para comenzar",
+        content: "Elige tu meta de ayuno en el cronómetro y presiona iniciar. Mantén una botella de agua cerca para controlar los antojos."
+      });
+      return;
+    }
 
-    fetchCoachingTip();
-  }, [fastingSeconds]);
+    const hours = fastingSeconds / 3600;
+    
+    // CASO 1: ¡META ALCANZADA!
+    if (hours >= targetHours) {
+      if (targetHours >= 16) {
+        setCurrentTip({
+          phase: "¡Meta Cumplida! 🎉",
+          title: "Zona de Cetosis y Autofagia",
+          content: "¡Meta alcanzada! Aquí es donde ocurre la magia de la limpieza celular y la máxima optimización metabólica. Puedes romper el ayuno cuando lo desees."
+        });
+      } else if (targetHours >= 14) {
+        setCurrentTip({
+          phase: "¡Meta Cumplida! 🎉",
+          title: "Zona de Cetosis Temprana",
+          content: "¡Meta alcanzada! Tu cuerpo ya está quemando grasa como energía y mejorando tu claridad mental. Gran trabajo."
+        });
+      } else {
+        setCurrentTip({
+          phase: "¡Meta Cumplida! 🎉",
+          title: "Zona de Descanso Digestivo",
+          content: "¡Meta alcanzada! Tu insulina se ha regulado y tu sistema digestivo ha descansado por completo."
+        });
+      }
+      return;
+    }
+
+    // CASO 2: FASES BIOLÓGICAS MIENTRAS CORRE EL RELOJ
+    if (hours < 2) {
+      setCurrentTip({ phase: "Fase 1 (0-2h)", title: "Nivelando Azúcar", content: "Tu cuerpo está procesando tu última comida. Los niveles de insulina comienzan a estabilizarse. Mantente hidratado." });
+    } else if (hours < 8) {
+      setCurrentTip({ phase: "Fase 2 (2-8h)", title: "El cuerpo se prepara", content: "Tu sistema digestivo descansa. El azúcar en sangre baja y tu cuerpo se prepara para buscar reservas de energía." });
+    } else if (hours < 10) {
+      setCurrentTip({ phase: "Fase 3 (8-10h)", title: "Agotando el Glucógeno", content: "Las reservas de azúcar (glucógeno) en tu hígado se están acabando. Pronto entrarás en modo 'quema de grasa'." });
+    } else if (hours < 12) {
+      setCurrentTip({ phase: "Fase 4 (10-12h)", title: "Activación Metabólica", content: "¡El cambio ha comenzado! Tu cuerpo empieza a liberar grasa almacenada para usarla como energía." });
+    } else if (hours < 14) {
+      setCurrentTip({ phase: "Fase 5 (12-14h)", title: "Produciendo Cetonas", content: "Tu hígado está produciendo cetonas. Sentirás más claridad mental y tu hambre comenzará a desaparecer progresivamente." });
+    } else if (hours < 16) {
+      setCurrentTip({ phase: "Fase 6 (14-16h)", title: "Pico de Quema de Grasa", content: "Tu cuerpo es ahora una máquina eficiente. Estás utilizando grasa como combustible principal. ¡Sigue así!" });
+    } else if (hours < 18) {
+      setCurrentTip({ phase: "Fase 7 (16-18h)", title: "Inicio de Autofagia", content: "Tus células comienzan a 'reciclar' componentes viejos o dañados. Es el inicio del proceso de antienvejecimiento." });
+    } else {
+      setCurrentTip({ phase: "Fase 8 (18h+)", title: "Regeneración Máxima", content: "Autofagia profunda. Tienes máxima limpieza celular y reducción de la inflamación. Tu cuerpo se repara a nivel profundo." });
+    }
+  }, [fastingSeconds, targetHours, isFasting]);
 
   // Búsqueda inteligente de alimentos en la API con debounce
   useEffect(() => {
@@ -130,7 +173,7 @@ function DashboardContent() {
       const res = await fetch('/api/fasting/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail, is_fasting: newFastingState, target_hours: 16 })
+        body: JSON.stringify({ email: userEmail, is_fasting: newFastingState, target_hours: targetHours })
       });
       const data = await res.json();
 
@@ -199,7 +242,7 @@ function DashboardContent() {
 
   const currentWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight_kg : 'Sin registros';
 
-  // Lógica para renderizar la Gráfica SVG de Evolución de Peso (Opción 2)
+  // Lógica para renderizar la Gráfica SVG de Evolución de Peso
   const renderWeightChart = () => {
     if (weightHistory.length === 0) return null;
 
@@ -274,12 +317,14 @@ function DashboardContent() {
         <p className="text-gray-500 mt-1">Monitorea tus avances metabólicos y resuelve tus dudas al instante.</p>
       </div>
 
-      {/* Tarjeta Dinámica del Coach Metabólico */}
+      {/* Tarjeta Dinámica del Coach Metabólico (Cambia a verde si logró la meta) */}
       {currentTip && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-6 rounded-2xl shadow-sm">
+        <div className={`border p-6 rounded-2xl shadow-sm transition-all ${currentTip.phase.includes('Meta Cumplida') ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200' : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">💡</span>
-            <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Coach Metabólico • Fase actual</span>
+            <span className={`text-xs font-bold uppercase tracking-wider ${currentTip.phase.includes('Meta Cumplida') ? 'text-emerald-800' : 'text-amber-800'}`}>
+              Coach Metabólico • {currentTip.phase}
+            </span>
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-1">{currentTip.title}</h3>
           <p className="text-sm text-gray-700 leading-relaxed">{currentTip.content}</p>
@@ -305,16 +350,34 @@ function DashboardContent() {
             {isFasting ? (
               <div className="my-4 text-center">
                 <span className="text-4xl font-black font-mono tracking-wider">{formatFastingTime(fastingSeconds)}</span>
-                <p className="text-xs text-indigo-200 mt-1">Meta recomendada: 16 horas</p>
+                <p className="text-xs text-indigo-200 mt-1">Meta actual: {targetHours} horas</p>
+                {fastingSeconds >= targetHours * 3600 && (
+                  <p className="text-xs text-emerald-400 font-bold mt-2 animate-pulse">¡Meta completada!</p>
+                )}
               </div>
             ) : (
-              <p className="text-sm text-gray-600 mb-4">Lleva el control estricto de tus ventanas de ayuno y alimentación.</p>
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-3">Lleva el control estricto de tus ventanas de ayuno y alimentación.</p>
+                <label className="block text-xs font-bold text-indigo-700 uppercase mb-1">Elige tu plan de hoy:</label>
+                <select 
+                  value={targetHours}
+                  onChange={(e) => setTargetHours(Number(e.target.value))}
+                  className="w-full p-3 border border-indigo-200 rounded-xl text-sm focus:border-indigo-600 outline-none bg-white text-gray-800 shadow-sm font-medium"
+                >
+                  <option value={12}>12/12 - Principiante (12h)</option>
+                  <option value={14}>14/10 - Intermedio (14h)</option>
+                  <option value={16}>16/8 - Clásico / Pro (16h)</option>
+                  <option value={18}>18/6 - Avanzado (18h)</option>
+                  <option value={20}>20/4 - Dieta Guerrero (20h)</option>
+                  <option value={24}>24h - Desintoxicación (OMAD)</option>
+                </select>
+              </div>
             )}
           </div>
 
           <button 
             onClick={toggleFasting}
-            className={`w-full font-bold py-3 px-4 rounded-xl transition-all text-center shadow-md ${isFasting ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+            className={`w-full font-bold py-3 px-4 rounded-xl transition-all text-center shadow-md ${isFasting ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white mt-2'}`}
           >
             {isFasting ? 'Romper Ayuno / Finalizar' : 'Iniciar Ayuno'}
           </button>
