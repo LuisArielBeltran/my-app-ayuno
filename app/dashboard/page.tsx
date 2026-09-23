@@ -486,6 +486,9 @@ function DashboardContent() {
         )}
       </div>
 
+      {/* AQUÍ ESTÁ LA NUEVA SECCIÓN DE RECETAS */}
+      <RecipeGuide />
+
       <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl text-center">
         <p className="text-sm text-emerald-600 font-semibold">Plan Personalizado Activo ✓</p>
       </div>
