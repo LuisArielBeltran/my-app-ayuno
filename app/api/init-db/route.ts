@@ -40,13 +40,12 @@ export async function GET() {
       );
     `);
 
-    // Asegurar columna synonyms e índice único para food_name
     await pool.query(`
       ALTER TABLE food_database ADD COLUMN IF NOT EXISTS synonyms TEXT;
       CREATE UNIQUE INDEX IF NOT EXISTS food_database_name_idx ON food_database (food_name);
     `);
 
-    // Limpiar posibles duplicados anteriores en Railway
+    // Limpiar duplicados de alimentos
     await pool.query(`
       DELETE FROM food_database a USING food_database b 
       WHERE a.id > b.id AND a.food_name = b.food_name;
@@ -61,6 +60,16 @@ export async function GET() {
         title VARCHAR(255) NOT NULL,
         content TEXT NOT NULL
       );
+    `);
+
+    // Limpiar y reinsertar los tips de coaching para asegurar que siempre estén actualizados
+    await pool.query(`DELETE FROM coaching_tips;`);
+    await pool.query(`
+      INSERT INTO coaching_tips (phase_hours, goal, title, content) VALUES
+      (0, 'general', 'Inicio del Ayuno', 'Tu cuerpo comienza a procesar la última comida. Los niveles de glucosa e insulina se estabilizan.'),
+      (4, 'general', 'Fin de la digestión', 'Tus niveles de insulina comienzan a descender. El cuerpo empieza a utilizar la energía de tu última comida.'),
+      (12, 'general', 'Quema ligera de grasa', 'Tus reservas de glucógeno hepático se están agotando. El organismo empieza a mirar hacia las grasas almacenadas como combustible.'),
+      (16, 'general', 'Zona de Cetosis y Autofagia', '¡Meta alcanzada! Aquí es donde ocurre la magia de la limpieza celular y la máxima optimización metabólica.');
     `);
 
     // 5. Tabla de Hidratación
@@ -84,7 +93,7 @@ export async function GET() {
       );
     `);
 
-    // --- SEED DE ALIMENTOS LATINOAMERICANOS ---
+    // --- SEED DE ALIMENTOS ---
     const foods = [
       ['Agua', false, 'Bebidas', 'Hidrata sin generar ninguna respuesta de insulina. Es la base de cualquier ayuno.', 'agua mineral, agua de la canilla, agua purificada'],
       ['Mate amargo / Cimarrón', false, 'Infusiones', 'Permitido. Las hojas de yerba mate sin azúcar ni miel no elevan la glucosa y aportan antioxidantes.', 'mate, cimarrón, amargo, mate solo'],
@@ -96,14 +105,14 @@ export async function GET() {
       ['Mate cocido', false, 'Infusiones', 'Infusión de yerba mate pura sin azúcar.', 'mate cocido'],
       ['Stevia pura / Eritritol / Alulosa', false, 'Endulzantes', 'Endulzantes no calóricos que no afectan significativamente la glucosa en la mayoría de las personas.', 'stevia, eritritol, alulosa, monk fruit'],
       ['Azúcar blanca / Morena / Mascabado', true, 'Endulzantes', 'Eleva drásticamente la insulina, rompiendo el ayuno por completo.', 'azúcar, azúcar blanca, azúcar morena, azúcar mascabado'],
-      ['Panela / Piloncillo / Chancaca / Papelón', true, 'Endulzantes', 'Azúcar de caña sin refinar. Rompe el ayuno de forma absoluta.', 'panela, piloncillo, chancaca, papelón, raspadura'],
+      ['Panela / Piloncillo / Chancaca / Papelón', true, 'Endulzantes', 'Azúcar de caña sin refinar. Rompe el ayuno de absoluto.', 'panela, piloncillo, chancaca, papelón, raspadura'],
       ['Miel / Algarroba / Sirope', true, 'Endulzantes', 'Ricos en fructosa y glucosa, activan el metabolismo y cortan el ayuno.', 'miel, miel de abeja, algarroba, melaza, sirope'],
       ['Leche (entera, descremada, vegetal)', true, 'Lácteos', 'Aporta macronutrientes que activan la digestión y la insulina.', 'leche, leche entera, leche descremada, leche de almendras, leche de soja'],
       ['Manteca / Mantequilla', true, 'Grasas', 'Aunque se usa en café keto (ayuno graso), técnicamente activa la digestión. Para ayuno limpio, rompe.', 'manteca, mantequilla'],
       ['Crema de leche / Nata', true, 'Grasas', 'Contiene calorías y grasas que inician el proceso digestivo.', 'crema de leche, nata'],
       ['Jugo de fruta / Zumo / Licuado', true, 'Frutas', 'La fructosa libre entra directo al torrente sanguíneo cortando el ayuno y elevando la insulina.', 'jugo, zumo, licuado, exprimido, jugo de naranja'],
       ['Vinagre de manzana (diluido en agua)', false, 'Suplementos', 'Ayuda a regular la glucosa en sangre y no rompe el ayuno si se consume diluido.', 'vinagre de manzana, ACV'],
-      ['Caldo de huesos (Bone broth)', true, 'Alimentos', 'Contiene aminoácidos y colágeno. En ayuno estricto de agua rompe; en ayuno metabólico flexible se usa con moderación, pero cuenta con calorías.', 'caldo, caldo de huesos, consomé']
+      ['Caldo de huesos (Bone broth)', true, 'Alimentos', 'Contiene aminoácidos y colágeno. En ayuno estricto de agua rompe; en ayuno metabólico flexible se usa con moderación.', 'caldo, caldo de huesos, consomé']
     ];
 
     for (const food of foods) {
@@ -117,7 +126,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Índice único creado y base de datos poblada exitosamente!' 
+      message: '¡Base de datos y tips de coaching actualizados exitosamente!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
