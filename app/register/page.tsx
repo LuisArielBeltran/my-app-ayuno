@@ -1,17 +1,22 @@
 'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const searchParams = useSearchParams();
+  const emailParam = searchParams.get('email') || '';
+
+  const [email, setEmail] = useState(emailParam);
   const [password, setPassword] = useState('');
-  const [goal, setGoal] = useState('general');
-  const [gender, setGender] = useState('otro');
-  const [heightCm, setHeightCm] = useState('170');
-  const [weightKg, setWeightKg] = useState('70');
-  const [targetWeightKg, setTargetWeightKg] = useState('65');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+  }, [emailParam]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,17 +28,13 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          password,
-          goal,
-          gender,
-          height_cm: parseFloat(heightCm),
-          weight_kg: parseFloat(weightKg),
-          target_weight_kg: parseFloat(targetWeightKg)
+          password
         })
       });
       const data = await res.json();
 
       if (data.success) {
+        // Redirigir al dashboard con su email y el aviso de éxito
         router.push(`/dashboard?email=${encodeURIComponent(email)}&success=true`);
       } else {
         alert('Error en el registro: ' + data.error);
@@ -49,8 +50,9 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-black text-gray-900">Crear Cuenta</h1>
-          <p className="text-sm text-gray-500 mt-1">Comienza tu viaje de ayuno intermitente</p>
+          <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Último Paso</span>
+          <h1 className="text-2xl font-black text-gray-900 mt-2">Protege tu Cuenta</h1>
+          <p className="text-sm text-gray-500 mt-1">Crea una contraseña para asegurar tu plan y acceder cuando quieras.</p>
         </div>
 
         <form onSubmit={handleRegister} className="space-y-4">
@@ -61,13 +63,13 @@ export default function RegisterPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-indigo-600 outline-none"
+              className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-indigo-600 outline-none bg-gray-50"
               placeholder="tu@correo.com"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Contraseña</label>
+            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Crea una Contraseña</label>
             <input 
               type="password" 
               required
@@ -78,35 +80,12 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Peso actual (kg)</label>
-              <input 
-                type="number" 
-                step="0.1"
-                value={weightKg}
-                onChange={(e) => setWeightKg(e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-indigo-600 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Peso meta (kg)</label>
-              <input 
-                type="number" 
-                step="0.1"
-                value={targetWeightKg}
-                onChange={(e) => setTargetWeightKg(e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-indigo-600 outline-none"
-              />
-            </div>
-          </div>
-
           <button 
             type="submit"
             disabled={loading}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md"
           >
-            {loading ? 'Registrando...' : 'Completar Registro'}
+            {loading ? 'Creando cuenta...' : 'Activar mi Plan y Entrar 🚀'}
           </button>
         </form>
 
@@ -115,5 +94,13 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Cargando registro...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }
