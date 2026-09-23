@@ -27,6 +27,28 @@ export default function OnboardingPage() {
   };
 
   const nextStep = () => {
+    // Validaciones de rangos lógicos antes de avanzar de paso
+    if (step === 3) {
+      const h = parseFloat(formData.height.replace(',', '.'));
+      const w = parseFloat(formData.weight.replace(',', '.'));
+      if (isNaN(h) || h < 100 || h > 250) {
+        alert('Por favor ingresa una altura válida (entre 100 cm y 250 cm).');
+        return;
+      }
+      if (isNaN(w) || w < 30 || w > 300) {
+        alert('Por favor ingresa un peso actual válido (entre 30 kg y 300 kg).');
+        return;
+      }
+    }
+
+    if (step === 4) {
+      const tw = parseFloat(formData.targetWeight.replace(',', '.'));
+      if (isNaN(tw) || tw < 30 || tw > 300) {
+        alert('Por favor ingresa un peso objetivo válido (entre 30 kg y 300 kg).');
+        return;
+      }
+    }
+
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
@@ -139,11 +161,25 @@ export default function OnboardingPage() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Altura (cm)</label>
-                  <input type="number" placeholder="Ej. 175" value={formData.height} onChange={(e) => setFormData({...formData, height: e.target.value})} className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none transition-all" />
+                  <input 
+                    type="text" 
+                    inputMode="decimal"
+                    placeholder="Ej. 175" 
+                    value={formData.height} 
+                    onChange={(e) => setFormData({...formData, height: e.target.value})} 
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none transition-all" 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Peso actual (kg)</label>
-                  <input type="number" placeholder="Ej. 85" value={formData.weight} onChange={(e) => setFormData({...formData, weight: e.target.value})} className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none transition-all" />
+                  <input 
+                    type="text" 
+                    inputMode="decimal"
+                    placeholder="Ej. 85,5 o 85.5" 
+                    value={formData.weight} 
+                    onChange={(e) => setFormData({...formData, weight: e.target.value})} 
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none transition-all" 
+                  />
                 </div>
                 <button onClick={nextStep} disabled={!formData.height || !formData.weight} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all">
                   Continuar
@@ -161,7 +197,14 @@ export default function OnboardingPage() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Peso meta (kg)</label>
-                  <input type="number" placeholder="Ej. 75" value={formData.targetWeight} onChange={(e) => setFormData({...formData, targetWeight: e.target.value})} className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none transition-all" />
+                  <input 
+                    type="text" 
+                    inputMode="decimal"
+                    placeholder="Ej. 75,0 o 75.0" 
+                    value={formData.targetWeight} 
+                    onChange={(e) => setFormData({...formData, targetWeight: e.target.value})} 
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none transition-all" 
+                  />
                 </div>
                 <button onClick={nextStep} disabled={!formData.targetWeight} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all">
                   Siguiente
