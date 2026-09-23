@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function OnboardingPage() {
@@ -7,14 +7,15 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  // Memoria temporal del cuestionario
+  // Memoria temporal del cuestionario (incluyendo el email)
   const [formData, setFormData] = useState({
     goal: '',
     gender: '',
     height: '',
     weight: '',
     targetWeight: '',
-    water: ''
+    water: '',
+    email: ''
   });
 
   const totalSteps = 6;
@@ -22,7 +23,7 @@ export default function OnboardingPage() {
 
   const handleSelect = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
-    setTimeout(() => nextStep(), 300); // Pequeña pausa para que el usuario vea la selección
+    setTimeout(() => nextStep(), 300);
   };
 
   const nextStep = () => {
@@ -38,6 +39,11 @@ export default function OnboardingPage() {
   };
 
   const startAnalysis = async () => {
+    if (!formData.email || !formData.email.includes('@')) {
+      alert('Por favor ingresa un correo electrónico válido.');
+      return;
+    }
+
     setIsAnalyzing(true);
     try {
       const response = await fetch('/api/save-onboarding', {
@@ -58,11 +64,10 @@ export default function OnboardingPage() {
       }
     } catch (err) {
       console.error(err);
+      alert('Ocurrió un error de red. Inténtalo de nuevo.');
       setIsAnalyzing(false);
     }
   };
-  
-  // --- PANTALLAS DEL CUESTIONARIO ---
 
   if (isAnalyzing) {
     return (
@@ -85,14 +90,14 @@ export default function OnboardingPage() {
               ← Volver
             </button>
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mi Perfil</span>
-            <div className="w-10"></div> {/* Espaciador invisible para centrar el título */}
+            <div className="w-10"></div>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
             <div className="bg-indigo-600 h-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }}></div>
           </div>
         </div>
 
-        {/* Contenido Dinámico según el Paso */}
+        {/* Contenido Dinámico */}
         <div className="flex-1 px-6 py-8 overflow-y-auto">
           
           {step === 1 && (
@@ -165,7 +170,6 @@ export default function OnboardingPage() {
 
           {step === 5 && (
             <div className="animate-fade-in-up">
-              {/* Aquí luego reemplazaremos con una foto de un vaso de agua o salud */}
               <div className="w-full h-40 bg-gray-100 rounded-xl mb-6 flex items-center justify-center text-4xl">💧</div>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">¿Cuánta agua bebes al día?</h2>
               <div className="space-y-3">
@@ -185,13 +189,25 @@ export default function OnboardingPage() {
           )}
 
           {step === 6 && (
-            <div className="animate-fade-in-up text-center py-8">
-              <span className="text-6xl mb-4 block">📈</span>
-              <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Estás a un paso de tu plan</h2>
-              <p className="text-gray-500 mb-8 text-lg">Hemos recopilado la información necesaria para calcular tus macros, ventanas de ayuno y tiempo estimado para alcanzar tu meta.</p>
-              <button onClick={nextStep} className="w-full bg-indigo-600 text-white font-bold text-lg py-4 rounded-xl hover:bg-indigo-700 transition-all shadow-lg hover:shadow-xl">
-                Generar mi plan personalizado
-              </button>
+            <div className="animate-fade-in-up">
+              <span className="text-5xl mb-4 block text-center">✉️</span>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2 text-center">¿Dónde enviamos tu plan?</h2>
+              <p className="text-gray-500 mb-6 text-sm text-center">Introduce tu correo electrónico para guardar tus resultados y ver tu proyección personalizada.</p>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Correo electrónico</label>
+                  <input 
+                    type="email" 
+                    placeholder="tucorreo@gmail.com" 
+                    value={formData.email} 
+                    onChange={(e) => setFormData({...formData, email: e.target.value})} 
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-lg focus:border-indigo-600 focus:ring-0 outline-none transition-all" 
+                  />
+                </div>
+                <button onClick={nextStep} disabled={!formData.email || !formData.email.includes('@')} className="w-full bg-indigo-600 text-white font-bold text-lg py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg">
+                  Generar mi plan personalizado
+                </button>
+              </div>
             </div>
           )}
 
