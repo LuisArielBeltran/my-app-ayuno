@@ -37,14 +37,30 @@ export default function OnboardingPage() {
     if (step > 1) setStep(step - 1);
   };
 
-  const startAnalysis = () => {
+  const startAnalysis = async () => {
     setIsAnalyzing(true);
-    // Simulamos el tiempo de "Cálculo" (Ilusión de trabajo)
-    setTimeout(() => {
-      // Aquí en el futuro enviaremos los datos a la BD y redirigiremos al pago/registro
-      alert('¡Análisis completado! Redirigiendo a tu plan...');
-      router.push('/');
-    }, 4000);
+    try {
+      const response = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Simulamos la barra de carga psicológica y redirigimos a la pantalla de resultados
+        setTimeout(() => {
+          router.push('/dashboard'); // O a la ruta de tu plan personalizado/pago
+        }, 3000);
+      } else {
+        alert('Error al guardar los datos: ' + data.error);
+        setIsAnalyzing(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsAnalyzing(false);
+    }
   };
 
   // --- PANTALLAS DEL CUESTIONARIO ---
