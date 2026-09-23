@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
@@ -10,11 +11,26 @@ export async function GET() {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
-    // 2. Tabla de Alimentos (tu estructura original)
+    // 2. Tabla de Métricas del Usuario (Onboarding)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_metrics (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+        goal VARCHAR(255),
+        gender VARCHAR(50),
+        height_cm NUMERIC,
+        weight_kg NUMERIC,
+        target_weight_kg NUMERIC,
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // 3. Tabla de Alimentos
     await pool.query(`
       CREATE TABLE IF NOT EXISTS food_database (
         id SERIAL PRIMARY KEY,
@@ -26,7 +42,7 @@ export async function GET() {
       );
     `);
 
-    // 3. Tabla de Hidratación (Adaptada para vincularse por email)
+    // 4. Tabla de Hidratación
     await pool.query(`
       CREATE TABLE IF NOT EXISTS water_log (
         id SERIAL PRIMARY KEY,
@@ -36,7 +52,7 @@ export async function GET() {
       );
     `);
 
-    // 4. Tabla de Estado de Ayuno (Nueva para el cronómetro)
+    // 5. Tabla de Estado de Ayuno
     await pool.query(`
       CREATE TABLE IF NOT EXISTS fasting_state (
         id SERIAL PRIMARY KEY,
