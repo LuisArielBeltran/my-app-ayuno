@@ -6,12 +6,13 @@ import { Suspense } from 'react';
 function DashboardContent() {
   const searchParams = useSearchParams();
   const isSuccess = searchParams.get('success');
-  const userEmail = searchParams.get('email') || 'usuario@ayuno.com'; // Email de referencia
+  const userEmail = searchParams.get('email') || 'usuario@ayuno.com';
 
   // Estados interactivos para el cronómetro y el agua
   const [isFasting, setIsFasting] = useState(false);
   const [fastingSeconds, setFastingSeconds] = useState(0);
   const [waterGlasses, setWaterGlasses] = useState(3);
+  const [fastingStreak, setFastingStreak] = useState(3); // Racha simulada o calculada
 
   // Estados para el Validador de Alimentos
   const [searchTerm, setSearchTerm] = useState('');
@@ -137,6 +138,11 @@ function DashboardContent() {
         setIsFasting(newFastingState);
         if (newFastingState) {
           setFastingSeconds(0);
+        } else {
+          // Si finaliza el ayuno con éxito (ej. superó 12h), incrementamos la racha
+          if (fastingSeconds >= 12 * 3600) {
+            setFastingStreak((prev) => prev + 1);
+          }
         }
       }
     } catch (err) {
@@ -179,6 +185,65 @@ function DashboardContent() {
 
   const currentWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight_kg : 'Sin registros';
 
+  // Lógica para renderizar la Gráfica SVG de Evolución de Peso (Opción 2)
+  const renderWeightChart = () => {
+    if (weightHistory.length === 0) return null;
+
+    const weights = weightHistory.map((w: any) => Number(w.weight_kg));
+    const minW = Math.min(...weights, targetWeight || Math.min(...weights)) - 2;
+    const maxW = Math.max(...weights, targetWeight || Math.max(...weights)) + 2;
+    const range = maxW - minW || 1;
+
+    const width = 500;
+    const height = 160;
+    const padding = 20;
+
+    const points = weightHistory.map((w: any, index: number) => {
+      const x = padding + (index / (weightHistory.length === 1 ? 1 : weightHistory.length - 1)) * (width - padding * 2);
+      const y = height - padding - ((Number(w.weight_kg) - minW) / range) * (height - padding * 2);
+      return { x, y, weight: w.weight_kg, date: new Date(w.log_date).toLocaleDateString() };
+    });
+
+    const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(' ');
+
+    return (
+      <div className="mt-4 bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
+        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Tendencia de Progreso Corporal</span>
+        <div className="w-full overflow-x-auto">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-36 overflow-visible">
+            {targetWeight && (
+              <line 
+                x1={padding} 
+                y1={height - padding - ((targetWeight - minW) / range) * (height - padding * 2)} 
+                x2={width - padding} 
+                y2={height - padding - ((targetWeight - minW) / range) * (height - padding * 2)} 
+                stroke="#10b981" 
+                strokeDasharray="4 4" 
+                strokeWidth="1.5" 
+              />
+            )}
+            {points.length > 1 && (
+              <polyline 
+                fill="none" 
+                stroke="#7c3aed" 
+                strokeWidth="3" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                points={polylinePoints} 
+              />
+            )}
+            {points.map((p, idx) => (
+              <g key={idx}>
+                <circle cx={p.x} cy={p.y} r="5" fill="#7c3aed" className="transition-all hover:scale-125" />
+                <text x={p.x} y={p.y - 10} textAnchor="middle" className="text-[10px] fill-gray-700 font-bold">{p.weight}kg</text>
+              </g>
+            ))}
+          </svg>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8 space-y-6">
       
@@ -213,9 +278,14 @@ function DashboardContent() {
         {/* Tarjeta de Cronómetro Interactiva */}
         <div className={`border p-6 rounded-2xl flex flex-col justify-between transition-all ${isFasting ? 'bg-indigo-900 text-white border-indigo-900 shadow-lg' : 'bg-indigo-50 border-indigo-100 text-gray-900'}`}>
           <div>
-            <span className={`text-xs font-bold uppercase tracking-wider block mb-1 ${isFasting ? 'text-indigo-300' : 'text-indigo-600'}`}>
-              {isFasting ? '🔥 Ayuno en Curso' : 'Control activo'}
-            </span>
+            <div className="flex justify-between items-center mb-1">
+              <span className={`text-xs font-bold uppercase tracking-wider ${isFasting ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                {isFasting ? '🔥 Ayuno en Curso' : 'Control activo'}
+              </span>
+              <span className="text-xs bg-indigo-500/20 text-indigo-700 px-2 py-0.5 rounded-full font-bold">
+                ⚡ Racha: {fastingStreak} días
+              </span>
+            </div>
             <h3 className="text-xl font-bold mb-2">Cronómetro de Ayuno</h3>
             
             {isFasting ? (
@@ -256,7 +326,7 @@ function DashboardContent() {
 
       </div>
 
-      {/* Módulo de Seguimiento de Peso y Metas */}
+      {/* Módulo de Seguimiento de Peso, Metas y Gráfica */}
       <div className="bg-purple-50 border border-purple-100 p-6 rounded-2xl">
         <div className="flex justify-between items-center mb-4">
           <div>
@@ -297,11 +367,14 @@ function DashboardContent() {
         </div>
 
         {weightHistory.length > 0 && (
-          <div className="text-xs text-gray-500 flex items-center justify-between bg-white/60 p-3 rounded-xl">
+          <div className="text-xs text-gray-500 flex items-center justify-between bg-white/60 p-3 rounded-xl mb-2">
             <span>Total de registros: <b>{weightHistory.length}</b></span>
             <span>Último registro: {new Date(weightHistory[weightHistory.length - 1].log_date).toLocaleDateString()}</span>
           </div>
         )}
+
+        {/* Gráfica SVG de Evolución de Peso */}
+        {renderWeightChart()}
       </div>
 
       {/* Validador de Alimentos / Buscador Regional */}
