@@ -14,12 +14,15 @@ export async function POST(req: Request) {
 
     const selected = prices[plan] || prices['12'];
 
+    // URL base segura para evitar errores si la variable de entorno no está lista en build time
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://my-app-ayuno.vercel.app';
+
     // Petición a la API oficial de Mercado Pago para generar la preferencia de pago
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`, // Tu token de Mercado Pago configurado en las variables de entorno de Vercel
+        Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
       },
       body: JSON.stringify({
         items: [
@@ -31,9 +34,9 @@ export async function POST(req: Request) {
           },
         ],
         back_urls: {
-          success: `${process.env.NEXTAUTH_URL}/dashboard?success=true`,
-          failure: `${process.env.NEXTAUTH_URL}/onboarding/results?error=true`,
-          pending: `${process.env.NEXTAUTH_URL}/dashboard?pending=true`,
+          success: `${baseUrl}/dashboard?success=true`,
+          failure: `${baseUrl}/onboarding/results?error=true`,
+          pending: `${baseUrl}/dashboard?pending=true`,
         },
         auto_return: 'approved',
       }),
