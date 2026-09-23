@@ -14,7 +14,7 @@ export async function GET() {
       );
     `);
 
-    // 2. Tabla de Métricas del Usuario (Onboarding)
+    // 2. Tabla de Métricas del Usuario
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_metrics (
         id SERIAL PRIMARY KEY,
@@ -28,11 +28,11 @@ export async function GET() {
       );
     `);
 
-    // 3. Tabla de Base de Alimentos (¿Rompe el ayuno?)
+    // 3. Tabla de Base de Alimentos (Con UNIQUE para evitar duplicados)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS food_database (
         id SERIAL PRIMARY KEY,
-        food_name VARCHAR(150) NOT NULL,
+        food_name VARCHAR(150) UNIQUE NOT NULL,
         breaks_fast BOOLEAN NOT NULL,
         category VARCHAR(50),
         explanation TEXT,
@@ -40,7 +40,13 @@ export async function GET() {
       );
     `);
 
-    // 4. Tabla de Cápsulas de Coaching y Fases Metabólicas
+    // Limpiar posibles duplicados anteriores en Railway
+    await pool.query(`
+      DELETE FROM food_database a USING food_database b 
+      WHERE a.id > b.id AND a.food_name = b.food_name;
+    `);
+
+    // 4. Tabla de Cápsulas de Coaching
     await pool.query(`
       CREATE TABLE IF NOT EXISTS coaching_tips (
         id SERIAL PRIMARY KEY,
@@ -72,36 +78,40 @@ export async function GET() {
       );
     `);
 
-    // --- SEED DE ALIMENTOS LATINOAMERICANOS ---
-    const foodCheck = await pool.query('SELECT COUNT(*) FROM food_database');
-    if (parseInt(foodCheck.rows[0].count) < 10) {
+    // --- SEED DE ALIMENTOS LATINOAMERICANOS (Con ON CONFLICT) ---
+    const foods = [
+      ['Agua', false, 'Bebidas', 'Hidrata sin generar ninguna respuesta de insulina. Es la base de cualquier ayuno.', 'agua mineral, agua de la canilla, agua purificada'],
+      ['Mate amargo / Cimarrón', false, 'Infusiones', 'Permitido. Las hojas de yerba mate sin azúcar ni miel no elevan la glucosa y aportan antioxidantes.', 'mate, cimarrón, amargo, mate solo'],
+      ['Mate dulce / con azúcar o miel', true, 'Infusiones', 'Rompe el ayuno de inmediato debido al contenido de azúcar o miel.', 'mate dulce, mate con azúcar'],
+      ['Tereré', false, 'Infusiones', 'Infusión fría de yerba mate con agua y hielo (sin jugos en polvo ni azúcar).', 'tereré'],
+      ['Café negro / Espresso / Café solo', false, 'Bebidas', 'Permitido. Estimula la autofagia y no interrumpe el ayuno metabólico.', 'café, café negro, espresso, café americano'],
+      ['Café con leche / Cortado / Lágrima', true, 'Bebidas', 'Rompe el ayuno por la lactosa y proteínas de la leche.', 'café con leche, cortado, lágrima, café con cortadito'],
+      ['Té verde / Té negro / Infusiones de hierbas (sin azúcar)', false, 'Infusiones', 'Permitidas (manzanilla, boldo, cedrón, menta). No generan respuesta glucémica.', 'té, manzanilla, té verde, té negro, infusión, cocido'],
+      ['Mate cocido', false, 'Infusiones', 'Infusión de yerba mate pura sin azúcar.', 'mate cocido'],
+      ['Stevia pura / Eritritol / Alulosa', false, 'Endulzantes', 'Endulzantes no calóricos que no afectan significativamente la glucosa en la mayoría de las personas.', 'stevia, eritritol, alulosa, monk fruit'],
+      ['Azúcar blanca / Morena / Mascabado', true, 'Endulzantes', 'Eleva drásticamente la insulina, rompiendo el ayuno por completo.', 'azúcar, azúcar blanca, azúcar morena, azúcar mascabado'],
+      ['Panela / Piloncillo / Chancaca / Papelón', true, 'Endulzantes', 'Azúcar de caña sin refinar. Rompe el ayuno de forma absoluta.', 'panela, piloncillo, chancaca, papelón, raspadura'],
+      ['Miel / Algarroba / Sirope', true, 'Endulzantes', 'Ricos en fructosa y glucosa, activan el metabolismo y cortan el ayuno.', 'miel, miel de abeja, algarroba, melaza, sirope'],
+      ['Leche (entera, descremada, vegetal)', true, 'Lácteos', 'Aporta macronutrientes que activan la digestión y la insulina.', 'leche, leche entera, leche descremada, leche de almendras, leche de soja'],
+      ['Manteca / Mantequilla', true, 'Grasas', 'Aunque se usa en café keto (ayuno graso), técnicamente activa la digestión. Para ayuno limpio, rompe.', 'manteca, mantequilla'],
+      ['Crema de leche / Nata', true, 'Grasas', 'Contiene calorías y grasas que inician el proceso digestivo.', 'crema de leche, nata'],
+      ['Jugo de fruta / Zumo / Licuado', true, 'Frutas', 'La fructosa libre entra directo al torrente sanguíneo cortando el ayuno y elevando la insulina.', 'jugo, zumo, licuado, exprimido, jugo de naranja'],
+      ['Vinagre de manzana (diluido en agua)', false, 'Suplementos', 'Ayuda a regular la glucosa en sangre y no rompe el ayuno si se consume diluido.', 'vinagre de manzana, ACV'],
+      ['Caldo de huesos (Bone broth)', true, 'Alimentos', 'Contiene aminoácidos y colágeno. En ayuno estricto de agua rompe; en ayuno metabólico flexible se usa con moderación, pero cuenta con calorías.', 'caldo, caldo de huesos, consomé']
+    ];
+
+    for (const food of foods) {
       await pool.query(`
-        INSERT INTO food_database (food_name, breaks_fast, category, explanation, synonyms) VALUES
-        ('Agua', false, 'Bebidas', 'Hidrata sin generar ninguna respuesta de insulina. Es la base de cualquier ayuno.', 'agua mineral, agua de la canilla, agua purificada'),
-        ('Mate amargo / Cimarrón', false, 'Infusiones', 'Permitido. Las hojas de yerba mate sin azúcar ni miel no elevan la glucosa y aportan antioxidantes.', 'mate, cimarrón, amargo, mate solo'),
-        ('Mate dulce / con azúcar o miel', true, 'Infusiones', 'Rompe el ayuno de inmediato debido al contenido de azúcar o miel.', 'mate dulce, mate con azúcar'),
-        ('Tereré', false, 'Infusiones', 'Infusión fría de yerba mate con agua y hielo (sin jugos en polvo ni azúcar).', 'tereré'),
-        ('Café negro / Espresso / Café solo', false, 'Bebidas', 'Permitido. Estimula la autofagia y no interrumpe el ayuno metabólico.', 'café, café negro, espresso, café americano'),
-        ('Café con leche / Cortado / Lágrima', true, 'Bebidas', 'Rompe el ayuno por la lactosa y proteínas de la leche.', 'café con leche, cortado, lágrima, café con cortadito'),
-        ('Té verde / Té negro / Infusiones de hierbas (sin azúcar)', false, 'Infusiones', 'Permitidas (manzanilla, boldo, cedrón, menta). No generan respuesta glucémica.', 'té, manzanilla, té verde, té negro, infusión, cocido'),
-        ('Mate cocido', false, 'Infusiones', 'Infusión de yerba mate pura sin azúcar.', 'mate cocido'),
-        ('Stevia pura / Eritritol / Alulosa', false, 'Endulzantes', 'Endulzantes no calóricos que no afectan significativamente la glucosa en la mayoría de las personas.', 'stevia, eritritol, alulosa, monk fruit'),
-        ('Azúcar blanca / Morena / Mascabado', true, 'Endulzantes', 'Eleva drásticamente la insulina, rompiendo el ayuno por completo.', 'azúcar, azúcar blanca, azúcar morena, azúcar mascabado'),
-        ('Panela / Piloncillo / Chancaca / Papelón', true, 'Endulzantes', 'Azúcar de caña sin refinar. Rompe el ayuno de forma absoluta.', 'panela, piloncillo, chancaca, papelón, raspadura'),
-        ('Miel / Algarroba / Sirope', true, 'Endulzantes', 'Ricos en fructosa y glucosa, activan el metabolismo y cortan el ayuno.', 'miel, miel de abeja, algarroba, melaza, sirope'),
-        ('Leche (entera, descremada, vegetal)', true, 'Lácteos', 'Aporta macronutrientes que activan la digestión y la insulina.', 'leche, leche entera, leche descremada, leche de almendras, leche de soja'),
-        ('Manteca / Mantequilla', true, 'Grasas', 'Aunque se usa en café keto (ayuno graso), técnicamente activa la digestión. Para ayuno limpio, rompe.', 'manteca, mantequilla'),
-        ('Crema de leche / Nata', true, 'Grasas', 'Contiene calorías y grasas que inician el proceso digestivo.', 'crema de leche, nata'),
-        ('Jugo de fruta / Zumo / Licuado', true, 'Frutas', 'La fructosa libre entra directo al torrente sanguíneo cortando el ayuno y elevando la insulina.', 'jugo, zumo, licuado, exprimido, jugo de naranja'),
-        ('Vinagre de manzana (diluido en agua)', false, 'Suplementos', 'Ayuda a regular la glucosa en sangre y no rompe el ayuno si se consume diluido.', 'vinagre de manzana, ACV'),
-        ('Caldo de huesos (Bone broth)', true, 'Alimentos', 'Contiene aminoácidos y colágeno. En ayuno estricto de agua rompe; en ayuno metabólico flexible se usa con moderación, pero cuenta con calorías.', 'caldo, caldo de huesos, consomé')
-        ON CONFLICT DO NOTHING;
-      `);
+        INSERT INTO food_database (food_name, breaks_fast, category, explanation, synonyms)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (food_name) DO UPDATE 
+        SET breaks_fast = EXCLUDED.breaks_fast, explanation = EXCLUDED.explanation, synonyms = EXCLUDED.synonyms;
+      `, food);
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos estructurada y poblada con contenido inicial exitosamente!' 
+      message: '¡Base de datos limpia, sin duplicados y actualizada exitosamente!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
