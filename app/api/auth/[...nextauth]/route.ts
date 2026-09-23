@@ -3,10 +3,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import pool from "@/lib/db";
 import bcrypt from "bcryptjs";
 
-// BLINDAJE DE URL: Previene el error ERR_INVALID_URL en Vercel durante el build
-if (!process.env.NEXTAUTH_URL) {
-  process.env.NEXTAUTH_URL = 'https://my-app-ayuno-git-main-luisarielbeltrans-projects.vercel.app';
-}
+// Forzamos un valor por defecto seguro si la variable no existe en tiempo de build
+process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL && process.env.NEXTAUTH_URL.startsWith('http') 
+  ? process.env.NEXTAUTH_URL 
+  : 'https://my-app-ayuno-git-main-luisarielbeltrans-projects.vercel.app';
 
 const handler = NextAuth({
   providers: [
