@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 function DashboardContent() {
   const searchParams = useSearchParams();
   const isSuccess = searchParams.get('success');
+  const userEmail = searchParams.get('email') || 'usuario@ayuno.com'; // Email de referencia
 
   // Estados interactivos para el cronómetro y el agua
   const [isFasting, setIsFasting] = useState(false);
@@ -19,6 +20,27 @@ function DashboardContent() {
 
   // Estado del Coach Metabólico
   const [currentTip, setCurrentTip] = useState<any>(null);
+
+  // Cargar el estado real del ayuno desde Railway al iniciar
+  useEffect(() => {
+    const fetchFastingState = async () => {
+      try {
+        const res = await fetch(`/api/fasting/state?email=${encodeURIComponent(userEmail)}`);
+        const data = await res.json();
+        if (data.success && data.fasting.is_fasting && data.fasting.start_time) {
+          setIsFasting(true);
+          const start = new Date(data.fasting.start_time).getTime();
+          const now = new Date().getTime();
+          const elapsedSeconds = Math.floor((now - start) / 1000);
+          setFastingSeconds(elapsedSeconds > 0 ? elapsedSeconds : 0);
+        }
+      } catch (err) {
+        console.error('Error al cargar estado de ayuno:', err);
+      }
+    };
+
+    fetchFastingState();
+  }, [userEmail]);
 
   // Lógica del Cronómetro de Ayuno
   useEffect(() => {
@@ -84,12 +106,26 @@ function DashboardContent() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const toggleFasting = () => {
-    if (!isFasting) {
-      setIsFasting(true);
-      setFastingSeconds(0);
-    } else {
-      setIsFasting(false);
+  // Sincronizar el cambio de estado del ayuno con Railway
+  const toggleFasting = async () => {
+    const newFastingState = !isFasting;
+    
+    try {
+      const res = await fetch('/api/fasting/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, is_fasting: newFastingState, target_hours: 16 })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setIsFasting(newFastingState);
+        if (newFastingState) {
+          setFastingSeconds(0);
+        }
+      }
+    } catch (err) {
+      console.error('Error al actualizar estado de ayuno:', err);
     }
   };
 
