@@ -7,10 +7,15 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const isSuccess = searchParams.get('success');
 
-  // Estados interactivos para las herramientas del dashboard
+  // Estados interactivos para el cronómetro y el agua
   const [isFasting, setIsFasting] = useState(false);
   const [fastingSeconds, setFastingSeconds] = useState(0);
-  const [waterGlasses, setWaterGlasses] = useState(3); // Ejemplo inicial
+  const [waterGlasses, setWaterGlasses] = useState(3);
+
+  // Estados para el Validador de Alimentos
+  const [searchTerm, setSearchTerm] = useState('');
+  const [foodResults, setFoodResults] = useState<any[]>([]);
+  const [loadingFood, setLoadingFood] = useState(false);
 
   // Lógica del Cronómetro de Ayuno
   useEffect(() => {
@@ -25,6 +30,26 @@ function DashboardContent() {
     return () => clearInterval(interval);
   }, [isFasting]);
 
+  // Búsqueda inteligente de alimentos en la API con debounce
+  useEffect(() => {
+    const delayDebounce = setTimeout(async () => {
+      setLoadingFood(true);
+      try {
+        const res = await fetch(`/api/food/search?q=${encodeURIComponent(searchTerm)}`);
+        const data = await res.json();
+        if (data.success) {
+          setFoodResults(data.results);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingFood(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm]);
+
   const formatFastingTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -35,7 +60,7 @@ function DashboardContent() {
   const toggleFasting = () => {
     if (!isFasting) {
       setIsFasting(true);
-      setFastingSeconds(0); // Inicia desde 0
+      setFastingSeconds(0);
     } else {
       setIsFasting(false);
     }
@@ -46,23 +71,23 @@ function DashboardContent() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8">
+    <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8 space-y-6">
       
       {/* Banner de éxito si viene de la compra */}
       {isSuccess && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl mb-6 text-center animate-fade-in">
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-center animate-fade-in">
           <span className="font-bold block text-lg mb-1">¡🎉 Plan Activado con Éxito!</span>
           <p className="text-sm">Tu programa personalizado de ayuno intermitente está listo.</p>
         </div>
       )}
 
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-black text-gray-900">Panel Principal</h1>
-        <p className="text-gray-500 mt-1">Monitorea tus avances metabólicos y hábitos diarios.</p>
+      <div className="text-center">
+        <h1 className="text-3xl font-black text-gray-900">Panel Principal & Coach</h1>
+        <p className="text-gray-500 mt-1">Monitorea tus avances metabólicos y resuelve tus dudas al instante.</p>
       </div>
 
-      {/* Grid de opciones principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      {/* Grid de opciones principales (Cronómetro e Hidratación) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Tarjeta de Cronómetro Interactiva */}
         <div className={`border p-6 rounded-2xl flex flex-col justify-between transition-all ${isFasting ? 'bg-indigo-900 text-white border-indigo-900 shadow-lg' : 'bg-indigo-50 border-indigo-100 text-gray-900'}`}>
@@ -110,9 +135,52 @@ function DashboardContent() {
 
       </div>
 
+      {/* Validador de Alimentos / Buscador Regional */}
+      <div className="bg-gray-50 border border-gray-200 p-6 rounded-2xl">
+        <h3 className="text-xl font-bold text-gray-900 mb-1">🔍 Validador de Alimentos</h3>
+        <p className="text-sm text-gray-500 mb-4">Escribe cualquier producto (ej: mate, panela, cortado, café con leche) para saber si rompe tu ayuno.</p>
+        
+        <input 
+          type="text"
+          placeholder="Busca un alimento, bebida o término regional..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full p-4 border-2 border-gray-200 rounded-xl text-base focus:border-indigo-600 focus:ring-0 outline-none bg-white transition-all mb-4"
+        />
+
+        {loadingFood ? (
+          <p className="text-center text-sm text-gray-400 py-4">Buscando en la base de datos...</p>
+        ) : (
+          <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+            {foodResults.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-4">No se encontró ese producto. ¡Prueba con otro término!</p>
+            ) : (
+              foodResults.map((item) => (
+                <div key={item.id} className="bg-white p-4 rounded-xl border border-gray-200 flex items-start justify-between gap-4 shadow-sm">
+                  <div>
+                    <h4 className="font-bold text-gray-900">{item.food_name}</h4>
+                    <p className="text-xs text-gray-600 mt-1">{item.explanation}</p>
+                  </div>
+                  <div>
+                    {item.breaks_fast ? (
+                      <span className="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                        ❌ Rompe el ayuno
+                      </span>
+                    ) : (
+                      <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                        ✅ Permitido
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Estado del Plan */}
-      <div className="bg-gray-50 border border-gray-200 p-6 rounded-2xl text-center">
-        <h4 className="font-bold text-gray-800 mb-1">Estado de tu cuenta</h4>
+      <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl text-center">
         <p className="text-sm text-emerald-600 font-semibold">Plan Personalizado Activo ✓</p>
       </div>
 
