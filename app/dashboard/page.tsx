@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import RecipeGuide from '@/components/RecipeGuide';
 
 function DashboardContent() {
   const searchParams = useSearchParams();
