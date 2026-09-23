@@ -28,7 +28,7 @@ export async function GET() {
       );
     `);
 
-    // 3. Tabla de Base de Alimentos (Con UNIQUE para evitar duplicados)
+    // 3. Tabla de Base de Alimentos
     await pool.query(`
       CREATE TABLE IF NOT EXISTS food_database (
         id SERIAL PRIMARY KEY,
@@ -38,6 +38,11 @@ export async function GET() {
         explanation TEXT,
         synonyms TEXT
       );
+    `);
+
+    // Asegurar que la columna 'synonyms' exista si la tabla ya fue creada previamente sin ella
+    await pool.query(`
+      ALTER TABLE food_database ADD COLUMN IF NOT EXISTS synonyms TEXT;
     `);
 
     // Limpiar posibles duplicados anteriores en Railway
@@ -78,7 +83,7 @@ export async function GET() {
       );
     `);
 
-    // --- SEED DE ALIMENTOS LATINOAMERICANOS (Con ON CONFLICT) ---
+    // --- SEED DE ALIMENTOS LATINOAMERICANOS ---
     const foods = [
       ['Agua', false, 'Bebidas', 'Hidrata sin generar ninguna respuesta de insulina. Es la base de cualquier ayuno.', 'agua mineral, agua de la canilla, agua purificada'],
       ['Mate amargo / Cimarrón', false, 'Infusiones', 'Permitido. Las hojas de yerba mate sin azúcar ni miel no elevan la glucosa y aportan antioxidantes.', 'mate, cimarrón, amargo, mate solo'],
@@ -111,7 +116,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos limpia, sin duplicados y actualizada exitosamente!' 
+      message: '¡Base de datos actualizada con la columna synonyms y datos cargados con éxito!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
