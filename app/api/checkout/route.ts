@@ -4,6 +4,15 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const { plan } = await req.json();
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://my-app-ayuno.vercel.app';
+
+    // MODO SIMULACIÓN: Si aún no hay token de Mercado Pago, redirigimos directamente al dashboard para pruebas
+    if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.trim() === '') {
+      return NextResponse.json({ 
+        success: true, 
+        init_point: `${baseUrl}/dashboard?success=true&simulated=true` 
+      });
+    }
 
     // Definir precios según el plan seleccionado
     const prices: { [key: string]: { title: string; price: number } } = {
@@ -14,10 +23,7 @@ export async function POST(req: Request) {
 
     const selected = prices[plan] || prices['12'];
 
-    // URL base segura para evitar errores si la variable de entorno no está lista en build time
-    const baseUrl = process.env.NEXTAUTH_URL || 'https://my-app-ayuno.vercel.app';
-
-    // Petición a la API oficial de Mercado Pago para generar la preferencia de pago
+    // Petición oficial a Mercado Pago
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
