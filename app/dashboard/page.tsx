@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import RecipeGuide from '@/components/RecipeGuide';
+import FoodAnalyzer from '@/components/FoodAnalyzer';
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -142,13 +143,10 @@ function DashboardContent() {
       const currentW = Number(weightHistory[weightHistory.length - 1].weight_kg);
 
       if (initialWeight > targetWeight && currentW <= targetWeight) {
-        // Quería bajar de peso y lo logró
         setGoalReached(true);
       } else if (initialWeight < targetWeight && currentW >= targetWeight) {
-        // Quería ganar masa muscular y lo logró
         setGoalReached(true);
       } else if (initialWeight === targetWeight && currentW === targetWeight) {
-        // Mantenimiento
         setGoalReached(true);
       } else {
         setGoalReached(false);
@@ -381,7 +379,6 @@ function DashboardContent() {
       {/* Módulo de Seguimiento de Peso */}
       <div className="bg-purple-50 border border-purple-100 p-6 rounded-2xl">
         
-        {/* CARTA DORADA DE CELEBRACIÓN DE META */}
         {goalReached && (
           <div className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 p-1 rounded-2xl mb-6 shadow-xl animate-bounce-slight transition-all">
             <div className="bg-white px-6 py-8 rounded-xl text-center">
@@ -486,7 +483,10 @@ function DashboardContent() {
         )}
       </div>
 
-      {/* AQUÍ ESTÁ LA NUEVA SECCIÓN DE RECETAS */}
+      {/* MÓDULO DE IA POR FOTOGRAFÍA (NUEVO) */}
+      <FoodAnalyzer />
+
+      {/* Guía de Recetas Rotativas */}
       <RecipeGuide />
 
       <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl text-center">
