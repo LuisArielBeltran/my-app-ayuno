@@ -56,7 +56,9 @@ export default function OnboardingPage() {
       
       if (data.success) {
         setTimeout(() => {
-          router.push('/onboarding/results');
+          // Redirigir al registro para que establezca su contraseña segura, 
+          // llevando ya precargado su correo del onboarding
+          router.push(`/register?email=${encodeURIComponent(formData.email)}`);
         }, 3000);
       } else {
         alert('Error al guardar los datos: ' + data.error);
