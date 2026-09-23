@@ -11,9 +11,9 @@ function DashboardContent() {
   // Estados interactivos para el cronómetro y el agua
   const [isFasting, setIsFasting] = useState(false);
   const [fastingSeconds, setFastingSeconds] = useState(0);
-  const [targetHours, setTargetHours] = useState<number>(16); // NUEVO: Estado para el tipo de ayuno
+  const [targetHours, setTargetHours] = useState<number>(16);
   const [waterGlasses, setWaterGlasses] = useState(3);
-  const [fastingStreak, setFastingStreak] = useState(3); // Racha simulada o calculada
+  const [fastingStreak, setFastingStreak] = useState(3);
 
   // Estados para el Validador de Alimentos
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,11 +29,13 @@ function DashboardContent() {
   const [newWeightInput, setNewWeightInput] = useState('');
   const [submittingWeight, setSubmittingWeight] = useState(false);
 
-  // Cargar el estado real del ayuno y peso desde Railway al iniciar
+  // NUEVO: Estado de Celebración de Meta
+  const [goalReached, setGoalReached] = useState(false);
+
+  // 1. Cargar el estado real del ayuno y peso desde la Base de Datos
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        // 1. Estado del ayuno
         const fastingRes = await fetch(`/api/fasting/state?email=${encodeURIComponent(userEmail)}`);
         const fastingData = await fastingRes.json();
         if (fastingData.success && fastingData.fasting.is_fasting && fastingData.fasting.start_time) {
@@ -47,7 +49,6 @@ function DashboardContent() {
           setFastingSeconds(elapsedSeconds > 0 ? elapsedSeconds : 0);
         }
 
-        // 2. Historial de peso y metas
         const weightRes = await fetch(`/api/weight?email=${encodeURIComponent(userEmail)}`);
         const weightData = await weightRes.json();
         if (weightData.success) {
@@ -62,7 +63,7 @@ function DashboardContent() {
     fetchInitialData();
   }, [userEmail]);
 
-  // Lógica del Cronómetro de Ayuno
+  // 2. Lógica del Cronómetro de Ayuno
   useEffect(() => {
     let interval: any = null;
     if (isFasting) {
@@ -75,7 +76,7 @@ function DashboardContent() {
     return () => clearInterval(interval);
   }, [isFasting]);
 
-  // Cerebro del Coach Metabólico (En tiempo real basado en reloj y meta)
+  // 3. Cerebro del Coach Metabólico (En tiempo real)
   useEffect(() => {
     if (!isFasting) {
       setCurrentTip({
@@ -88,51 +89,28 @@ function DashboardContent() {
 
     const hours = fastingSeconds / 3600;
     
-    // CASO 1: ¡META ALCANZADA!
     if (hours >= targetHours) {
       if (targetHours >= 16) {
-        setCurrentTip({
-          phase: "¡Meta Cumplida! 🎉",
-          title: "Zona de Cetosis y Autofagia",
-          content: "¡Meta alcanzada! Aquí es donde ocurre la magia de la limpieza celular y la máxima optimización metabólica. Puedes romper el ayuno cuando lo desees."
-        });
+        setCurrentTip({ phase: "¡Meta Cumplida! 🎉", title: "Zona de Cetosis y Autofagia", content: "¡Meta alcanzada! Aquí es donde ocurre la magia de la limpieza celular y la máxima optimización metabólica. Puedes romper el ayuno cuando lo desees." });
       } else if (targetHours >= 14) {
-        setCurrentTip({
-          phase: "¡Meta Cumplida! 🎉",
-          title: "Zona de Cetosis Temprana",
-          content: "¡Meta alcanzada! Tu cuerpo ya está quemando grasa como energía y mejorando tu claridad mental. Gran trabajo."
-        });
+        setCurrentTip({ phase: "¡Meta Cumplida! 🎉", title: "Zona de Cetosis Temprana", content: "¡Meta alcanzada! Tu cuerpo ya está quemando grasa como energía y mejorando tu claridad mental. Gran trabajo." });
       } else {
-        setCurrentTip({
-          phase: "¡Meta Cumplida! 🎉",
-          title: "Zona de Descanso Digestivo",
-          content: "¡Meta alcanzada! Tu insulina se ha regulado y tu sistema digestivo ha descansado por completo."
-        });
+        setCurrentTip({ phase: "¡Meta Cumplida! 🎉", title: "Zona de Descanso Digestivo", content: "¡Meta alcanzada! Tu insulina se ha regulado y tu sistema digestivo ha descansado por completo." });
       }
       return;
     }
 
-    // CASO 2: FASES BIOLÓGICAS MIENTRAS CORRE EL RELOJ
-    if (hours < 2) {
-      setCurrentTip({ phase: "Fase 1 (0-2h)", title: "Nivelando Azúcar", content: "Tu cuerpo está procesando tu última comida. Los niveles de insulina comienzan a estabilizarse. Mantente hidratado." });
-    } else if (hours < 8) {
-      setCurrentTip({ phase: "Fase 2 (2-8h)", title: "El cuerpo se prepara", content: "Tu sistema digestivo descansa. El azúcar en sangre baja y tu cuerpo se prepara para buscar reservas de energía." });
-    } else if (hours < 10) {
-      setCurrentTip({ phase: "Fase 3 (8-10h)", title: "Agotando el Glucógeno", content: "Las reservas de azúcar (glucógeno) en tu hígado se están acabando. Pronto entrarás en modo 'quema de grasa'." });
-    } else if (hours < 12) {
-      setCurrentTip({ phase: "Fase 4 (10-12h)", title: "Activación Metabólica", content: "¡El cambio ha comenzado! Tu cuerpo empieza a liberar grasa almacenada para usarla como energía." });
-    } else if (hours < 14) {
-      setCurrentTip({ phase: "Fase 5 (12-14h)", title: "Produciendo Cetonas", content: "Tu hígado está produciendo cetonas. Sentirás más claridad mental y tu hambre comenzará a desaparecer progresivamente." });
-    } else if (hours < 16) {
-      setCurrentTip({ phase: "Fase 6 (14-16h)", title: "Pico de Quema de Grasa", content: "Tu cuerpo es ahora una máquina eficiente. Estás utilizando grasa como combustible principal. ¡Sigue así!" });
-    } else if (hours < 18) {
-      setCurrentTip({ phase: "Fase 7 (16-18h)", title: "Inicio de Autofagia", content: "Tus células comienzan a 'reciclar' componentes viejos o dañados. Es el inicio del proceso de antienvejecimiento." });
-    } else {
-      setCurrentTip({ phase: "Fase 8 (18h+)", title: "Regeneración Máxima", content: "Autofagia profunda. Tienes máxima limpieza celular y reducción de la inflamación. Tu cuerpo se repara a nivel profundo." });
-    }
+    if (hours < 2) setCurrentTip({ phase: "Fase 1 (0-2h)", title: "Nivelando Azúcar", content: "Tu cuerpo está procesando tu última comida. Los niveles de insulina comienzan a estabilizarse." });
+    else if (hours < 8) setCurrentTip({ phase: "Fase 2 (2-8h)", title: "El cuerpo se prepara", content: "Tu sistema digestivo descansa. El azúcar en sangre baja y tu cuerpo busca reservas de energía." });
+    else if (hours < 10) setCurrentTip({ phase: "Fase 3 (8-10h)", title: "Agotando el Glucógeno", content: "Las reservas de azúcar en tu hígado se están acabando. Pronto entrarás en modo 'quema de grasa'." });
+    else if (hours < 12) setCurrentTip({ phase: "Fase 4 (10-12h)", title: "Activación Metabólica", content: "¡El cambio ha comenzado! Tu cuerpo empieza a liberar grasa almacenada para usarla como energía." });
+    else if (hours < 14) setCurrentTip({ phase: "Fase 5 (12-14h)", title: "Produciendo Cetonas", content: "Tu hígado produce cetonas. Sentirás más claridad mental y tu hambre comenzará a desaparecer." });
+    else if (hours < 16) setCurrentTip({ phase: "Fase 6 (14-16h)", title: "Pico de Quema de Grasa", content: "Estás utilizando grasa como combustible principal. ¡Sigue así!" });
+    else if (hours < 18) setCurrentTip({ phase: "Fase 7 (16-18h)", title: "Inicio de Autofagia", content: "Tus células comienzan a 'reciclar' componentes viejos o dañados. Es el inicio del antienvejecimiento." });
+    else setCurrentTip({ phase: "Fase 8 (18h+)", title: "Regeneración Máxima", content: "Autofagia profunda. Tienes máxima limpieza celular y reducción de la inflamación." });
   }, [fastingSeconds, targetHours, isFasting]);
 
-  // Búsqueda inteligente de alimentos en la API con debounce
+  // 4. Búsqueda inteligente de alimentos
   useEffect(() => {
     const delayDebounce = setTimeout(async () => {
       if (!searchTerm.trim()) {
@@ -140,7 +118,6 @@ function DashboardContent() {
         setLoadingFood(false);
         return;
       }
-
       setLoadingFood(true);
       try {
         const res = await fetch(`/api/food/search?q=${encodeURIComponent(searchTerm)}`);
@@ -154,9 +131,29 @@ function DashboardContent() {
         setLoadingFood(false);
       }
     }, 300);
-
     return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
+
+  // NUEVO 5. Evaluar si se alcanzó el peso meta
+  useEffect(() => {
+    if (weightHistory.length > 0 && targetWeight !== null) {
+      const initialWeight = Number(weightHistory[0].weight_kg);
+      const currentW = Number(weightHistory[weightHistory.length - 1].weight_kg);
+
+      if (initialWeight > targetWeight && currentW <= targetWeight) {
+        // Quería bajar de peso y lo logró
+        setGoalReached(true);
+      } else if (initialWeight < targetWeight && currentW >= targetWeight) {
+        // Quería ganar masa muscular y lo logró
+        setGoalReached(true);
+      } else if (initialWeight === targetWeight && currentW === targetWeight) {
+        // Mantenimiento
+        setGoalReached(true);
+      } else {
+        setGoalReached(false);
+      }
+    }
+  }, [weightHistory, targetWeight]);
 
   const formatFastingTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -165,10 +162,8 @@ function DashboardContent() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Sincronizar el cambio de estado del ayuno con Railway
   const toggleFasting = async () => {
     const newFastingState = !isFasting;
-    
     try {
       const res = await fetch('/api/fasting/state', {
         method: 'POST',
@@ -176,13 +171,11 @@ function DashboardContent() {
         body: JSON.stringify({ email: userEmail, is_fasting: newFastingState, target_hours: targetHours })
       });
       const data = await res.json();
-
       if (data.success) {
         setIsFasting(newFastingState);
         if (newFastingState) {
           setFastingSeconds(0);
         } else {
-          // Si finaliza el ayuno con éxito (ej. superó 12h), incrementamos la racha
           if (fastingSeconds >= 12 * 3600) {
             setFastingStreak((prev) => prev + 1);
           }
@@ -193,12 +186,10 @@ function DashboardContent() {
     }
   };
 
-  // Guardar nuevo registro de peso con validación de comas/puntos y rangos lógicos
   const handleAddWeight = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWeightInput) return;
 
-    // Normalizar coma a punto antes de verificar rangos en el cliente
     const sanitized = newWeightInput.replace(',', '.').trim();
     const weightNum = parseFloat(sanitized);
 
@@ -206,7 +197,6 @@ function DashboardContent() {
       alert('Por favor introduce un número válido.');
       return;
     }
-
     if (weightNum < 30 || weightNum > 300) {
       alert('El peso ingresado está fuera de los límites normales (debe estar entre 30 kg y 300 kg).');
       return;
@@ -226,7 +216,6 @@ function DashboardContent() {
         setNewWeightInput('');
       } else {
         alert('Error al guardar el peso: ' + (data.error || 'Desconocido'));
-        console.error('Detalle del error:', data);
       }
     } catch (err: any) {
       console.error('Error guardando peso:', err);
@@ -236,13 +225,9 @@ function DashboardContent() {
     }
   };
 
-  const addWaterGlass = () => {
-    setWaterGlasses((prev) => prev + 1);
-  };
-
+  const addWaterGlass = () => setWaterGlasses((prev) => prev + 1);
   const currentWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight_kg : 'Sin registros';
 
-  // Lógica para renderizar la Gráfica SVG de Evolución de Peso
   const renderWeightChart = () => {
     if (weightHistory.length === 0) return null;
 
@@ -250,7 +235,6 @@ function DashboardContent() {
     const minW = Math.min(...weights, targetWeight || Math.min(...weights)) - 2;
     const maxW = Math.max(...weights, targetWeight || Math.max(...weights)) + 2;
     const range = maxW - minW || 1;
-
     const width = 500;
     const height = 160;
     const padding = 20;
@@ -280,14 +264,7 @@ function DashboardContent() {
               />
             )}
             {points.length > 1 && (
-              <polyline 
-                fill="none" 
-                stroke="#7c3aed" 
-                strokeWidth="3" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                points={polylinePoints} 
-              />
+              <polyline fill="none" stroke="#7c3aed" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={polylinePoints} />
             )}
             {points.map((p, idx) => (
               <g key={idx}>
@@ -304,7 +281,6 @@ function DashboardContent() {
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8 space-y-6">
       
-      {/* Banner de éxito si viene de la compra */}
       {isSuccess && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-center animate-fade-in">
           <span className="font-bold block text-lg mb-1">¡🎉 Plan Activado con Éxito!</span>
@@ -317,7 +293,6 @@ function DashboardContent() {
         <p className="text-gray-500 mt-1">Monitorea tus avances metabólicos y resuelve tus dudas al instante.</p>
       </div>
 
-      {/* Tarjeta Dinámica del Coach Metabólico (Cambia a verde si logró la meta) */}
       {currentTip && (
         <div className={`border p-6 rounded-2xl shadow-sm transition-all ${currentTip.phase.includes('Meta Cumplida') ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200' : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'}`}>
           <div className="flex items-center gap-2 mb-2">
@@ -331,7 +306,6 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Grid de opciones principales (Cronómetro e Hidratación) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Tarjeta de Cronómetro Interactiva */}
@@ -383,7 +357,7 @@ function DashboardContent() {
           </button>
         </div>
 
-        {/* Tarjeta de Hidratación Interactiva */}
+        {/* Tarjeta de Hidratación */}
         <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl flex flex-col justify-between">
           <div>
             <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">Hidratación</span>
@@ -403,8 +377,22 @@ function DashboardContent() {
 
       </div>
 
-      {/* Módulo de Seguimiento de Peso, Metas y Gráfica */}
+      {/* Módulo de Seguimiento de Peso */}
       <div className="bg-purple-50 border border-purple-100 p-6 rounded-2xl">
+        
+        {/* CARTA DORADA DE CELEBRACIÓN DE META */}
+        {goalReached && (
+          <div className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 p-1 rounded-2xl mb-6 shadow-xl animate-bounce-slight transition-all">
+            <div className="bg-white px-6 py-8 rounded-xl text-center">
+              <span className="text-6xl block mb-4">🏆</span>
+              <h2 className="text-2xl font-black text-gray-900 mb-2">¡Misión Cumplida!</h2>
+              <p className="text-gray-700 font-medium">
+                Has alcanzado tu peso meta de <span className="font-black text-yellow-600">{targetWeight} kg</span>. Todo tu esfuerzo, constancia y disciplina han dado sus frutos. ¡Felicidades, eres una inspiración!
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-4">
           <div>
             <span className="text-xs font-bold text-purple-600 uppercase tracking-wider block mb-1">Evolución Corporal</span>
@@ -450,11 +438,10 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* Gráfica SVG de Evolución de Peso */}
         {renderWeightChart()}
       </div>
 
-      {/* Validador de Alimentos / Buscador Regional */}
+      {/* Validador de Alimentos */}
       <div className="bg-gray-50 border border-gray-200 p-6 rounded-2xl">
         <h3 className="text-xl font-bold text-gray-900 mb-1">🔍 Validador de Alimentos</h3>
         <p className="text-sm text-gray-500 mb-4">Escribe cualquier producto (ej: mate, panela, cortado, café con leche) para saber si rompe tu ayuno.</p>
@@ -498,7 +485,6 @@ function DashboardContent() {
         )}
       </div>
 
-      {/* Estado del Plan */}
       <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl text-center">
         <p className="text-sm text-emerald-600 font-semibold">Plan Personalizado Activo ✓</p>
       </div>
