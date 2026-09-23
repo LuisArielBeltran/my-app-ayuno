@@ -93,6 +93,16 @@ export async function GET() {
       );
     `);
 
+    // 7. Tabla de Historial de Peso y Metas (¡Nuevo para la Opción B!)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS weight_logs (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        weight_kg NUMERIC NOT NULL,
+        log_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // --- SEED DE ALIMENTOS ---
     const foods = [
       ['Agua', false, 'Bebidas', 'Hidrata sin generar ninguna respuesta de insulina. Es la base de cualquier ayuno.', 'agua mineral, agua de la canilla, agua purificada'],
@@ -126,7 +136,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos y tips de coaching actualizados exitosamente!' 
+      message: '¡Base de datos, tips de coaching y tabla de pesos actualizados exitosamente!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
