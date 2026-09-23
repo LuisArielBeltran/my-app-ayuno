@@ -49,9 +49,9 @@ export default function OnboardingPage() {
       const data = await response.json();
       
       if (data.success) {
-        // Simulamos la barra de carga psicológica y redirigimos a la pantalla de resultados
+        // Redirigimos a la pantalla de resultados y proyección de peso
         setTimeout(() => {
-          router.push('/dashboard'); // O a la ruta de tu plan personalizado/pago
+          router.push('/onboarding/results');
         }, 3000);
       } else {
         alert('Error al guardar los datos: ' + data.error);
