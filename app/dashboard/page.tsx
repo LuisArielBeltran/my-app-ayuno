@@ -150,17 +150,31 @@ function DashboardContent() {
     }
   };
 
-  // Guardar nuevo registro de peso con manejo de errores visible
+  // Guardar nuevo registro de peso con validación de comas/puntos y rangos lógicos
   const handleAddWeight = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWeightInput || isNaN(Number(newWeightInput))) return;
+    if (!newWeightInput) return;
+
+    // Normalizar coma a punto antes de verificar rangos en el cliente
+    const sanitized = newWeightInput.replace(',', '.').trim();
+    const weightNum = parseFloat(sanitized);
+
+    if (isNaN(weightNum)) {
+      alert('Por favor introduce un número válido.');
+      return;
+    }
+
+    if (weightNum < 30 || weightNum > 300) {
+      alert('El peso ingresado está fuera de los límites normales (debe estar entre 30 kg y 300 kg).');
+      return;
+    }
 
     setSubmittingWeight(true);
     try {
       const res = await fetch('/api/weight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail, weight_kg: parseFloat(newWeightInput) })
+        body: JSON.stringify({ email: userEmail, weight_kg: newWeightInput })
       });
       const data = await res.json();
       
@@ -349,9 +363,9 @@ function DashboardContent() {
 
           <form onSubmit={handleAddWeight} className="flex gap-2">
             <input 
-              type="number" 
-              step="0.1" 
-              placeholder="Nuevo peso (kg)"
+              type="text" 
+              inputMode="decimal"
+              placeholder="Ej. 70,5 o 70.5"
               value={newWeightInput}
               onChange={(e) => setNewWeightInput(e.target.value)}
               className="w-full p-3 border border-purple-200 rounded-xl text-sm focus:border-purple-600 outline-none bg-white"
