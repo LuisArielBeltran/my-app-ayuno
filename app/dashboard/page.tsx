@@ -17,6 +17,9 @@ function DashboardContent() {
   const [foodResults, setFoodResults] = useState<any[]>([]);
   const [loadingFood, setLoadingFood] = useState(false);
 
+  // Estado del Coach Metabólico
+  const [currentTip, setCurrentTip] = useState<any>(null);
+
   // Lógica del Cronómetro de Ayuno
   useEffect(() => {
     let interval: any = null;
@@ -30,9 +33,33 @@ function DashboardContent() {
     return () => clearInterval(interval);
   }, [isFasting]);
 
+  // Obtener consejo de coaching según las horas actuales de ayuno
+  useEffect(() => {
+    const fetchCoachingTip = async () => {
+      const currentHours = Math.floor(fastingSeconds / 3600);
+      try {
+        const res = await fetch(`/api/coaching/tips?hours=${currentHours}`);
+        const data = await res.json();
+        if (data.success && data.tip) {
+          setCurrentTip(data.tip);
+        }
+      } catch (err) {
+        console.error('Error obteniendo tip de coaching:', err);
+      }
+    };
+
+    fetchCoachingTip();
+  }, [fastingSeconds]);
+
   // Búsqueda inteligente de alimentos en la API con debounce
   useEffect(() => {
     const delayDebounce = setTimeout(async () => {
+      if (!searchTerm.trim()) {
+        setFoodResults([]);
+        setLoadingFood(false);
+        return;
+      }
+
       setLoadingFood(true);
       try {
         const res = await fetch(`/api/food/search?q=${encodeURIComponent(searchTerm)}`);
@@ -85,6 +112,18 @@ function DashboardContent() {
         <h1 className="text-3xl font-black text-gray-900">Panel Principal & Coach</h1>
         <p className="text-gray-500 mt-1">Monitorea tus avances metabólicos y resuelve tus dudas al instante.</p>
       </div>
+
+      {/* Tarjeta Dinámica del Coach Metabólico */}
+      {currentTip && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-6 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">💡</span>
+            <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Coach Metabólico • Fase actual</span>
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-1">{currentTip.title}</h3>
+          <p className="text-sm text-gray-700 leading-relaxed">{currentTip.content}</p>
+        </div>
+      )}
 
       {/* Grid de opciones principales (Cronómetro e Hidratación) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -152,9 +191,9 @@ function DashboardContent() {
           <p className="text-center text-sm text-gray-400 py-4">Buscando en la base de datos...</p>
         ) : (
           <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-            {foodResults.length === 0 ? (
+            {foodResults.length === 0 && searchTerm.trim() !== '' ? (
               <p className="text-center text-sm text-gray-400 py-4">No se encontró ese producto. ¡Prueba con otro término!</p>
-            ) : (
+            ) : foodResults.length === 0 ? null : (
               foodResults.map((item) => (
                 <div key={item.id} className="bg-white p-4 rounded-xl border border-gray-200 flex items-start justify-between gap-4 shadow-sm">
                   <div>
