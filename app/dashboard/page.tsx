@@ -21,25 +21,40 @@ function DashboardContent() {
   // Estado del Coach Metabólico
   const [currentTip, setCurrentTip] = useState<any>(null);
 
-  // Cargar el estado real del ayuno desde Railway al iniciar
+  // Estados de Seguimiento de Peso y Metas
+  const [weightHistory, setWeightHistory] = useState<any[]>([]);
+  const [targetWeight, setTargetWeight] = useState<number | null>(null);
+  const [newWeightInput, setNewWeightInput] = useState('');
+  const [submittingWeight, setSubmittingWeight] = useState(false);
+
+  // Cargar estado de ayuno y peso al iniciar desde Railway
   useEffect(() => {
-    const fetchFastingState = async () => {
+    const fetchInitialData = async () => {
       try {
-        const res = await fetch(`/api/fasting/state?email=${encodeURIComponent(userEmail)}`);
-        const data = await res.json();
-        if (data.success && data.fasting.is_fasting && data.fasting.start_time) {
+        // 1. Estado del ayuno
+        const fastingRes = await fetch(`/api/fasting/state?email=${encodeURIComponent(userEmail)}`);
+        const fastingData = await fastingRes.json();
+        if (fastingData.success && fastingData.fasting.is_fasting && fastingData.fasting.start_time) {
           setIsFasting(true);
-          const start = new Date(data.fasting.start_time).getTime();
+          const start = new Date(fastingData.fasting.start_time).getTime();
           const now = new Date().getTime();
           const elapsedSeconds = Math.floor((now - start) / 1000);
           setFastingSeconds(elapsedSeconds > 0 ? elapsedSeconds : 0);
         }
+
+        // 2. Historial de peso y metas
+        const weightRes = await fetch(`/api/weight?email=${encodeURIComponent(userEmail)}`);
+        const weightData = await weightRes.json();
+        if (weightData.success) {
+          setWeightHistory(weightData.weights);
+          setTargetWeight(weightData.target_weight);
+        }
       } catch (err) {
-        console.error('Error al cargar estado de ayuno:', err);
+        console.error('Error al cargar datos iniciales:', err);
       }
     };
 
-    fetchFastingState();
+    fetchInitialData();
   }, [userEmail]);
 
   // Lógica del Cronómetro de Ayuno
@@ -129,9 +144,35 @@ function DashboardContent() {
     }
   };
 
+  // Guardar nuevo registro de peso
+  const handleAddWeight = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWeightInput || isNaN(Number(newWeightInput))) return;
+
+    setSubmittingWeight(true);
+    try {
+      const res = await fetch('/api/weight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, weight_kg: parseFloat(newWeightInput) })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWeightHistory((prev) => [...prev, data.log]);
+        setNewWeightInput('');
+      }
+    } catch (err) {
+      console.error('Error guardando peso:', err);
+    } finally {
+      setSubmittingWeight(false);
+    }
+  };
+
   const addWaterGlass = () => {
     setWaterGlasses((prev) => prev + 1);
   };
+
+  const currentWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight_kg : 'Sin registros';
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8 space-y-6">
@@ -208,6 +249,54 @@ function DashboardContent() {
           </button>
         </div>
 
+      </div>
+
+      {/* Módulo de Seguimiento de Peso y Metas */}
+      <div className="bg-purple-50 border border-purple-100 p-6 rounded-2xl">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <span className="text-xs font-bold text-purple-600 uppercase tracking-wider block mb-1">Evolución Corporal</span>
+            <h3 className="text-xl font-bold text-gray-900">Seguimiento de Peso & Metas</h3>
+          </div>
+          {targetWeight && (
+            <div className="text-right bg-white px-4 py-2 rounded-xl border border-purple-200 shadow-sm">
+              <span className="text-xs text-gray-500 block">Meta Objetivo</span>
+              <span className="text-lg font-black text-purple-700">{targetWeight} kg</span>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="bg-white p-4 rounded-xl border border-purple-100 flex items-center justify-between">
+            <span className="text-sm font-semibold text-gray-600">Peso Actual:</span>
+            <span className="text-2xl font-black text-purple-900">{currentWeight} {currentWeight !== 'Sin registros' && 'kg'}</span>
+          </div>
+
+          <form onSubmit={handleAddWeight} className="flex gap-2">
+            <input 
+              type="number" 
+              step="0.1" 
+              placeholder="Nuevo peso (kg)"
+              value={newWeightInput}
+              onChange={(e) => setNewWeightInput(e.target.value)}
+              className="w-full p-3 border border-purple-200 rounded-xl text-sm focus:border-purple-600 outline-none bg-white"
+            />
+            <button 
+              type="submit"
+              disabled={submittingWeight}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-3 rounded-xl text-sm transition-all shadow-md whitespace-nowrap"
+            >
+              {submittingWeight ? 'Guardando...' : 'Registrar'}
+            </button>
+          </form>
+        </div>
+
+        {weightHistory.length > 0 && (
+          <div className="text-xs text-gray-500 flex items-center justify-between bg-white/60 p-3 rounded-xl">
+            <span>Total de registros: <b>{weightHistory.length}</b></span>
+            <span>Último registro: {new Date(weightHistory[weightHistory.length - 1].log_date).toLocaleDateString()}</span>
+          </div>
+        )}
       </div>
 
       {/* Validador de Alimentos / Buscador Regional */}
