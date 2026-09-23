@@ -8,14 +8,15 @@
     "start": "next start",
     "lint": "next lint"
   },
-  "dependencies": {
+ "dependencies": {
     "react": "^18",
     "react-dom": "^18",
     "next": "14.2.35",
     "pg": "^8.11.3",
     "next-auth": "^4.24.7",
     "bcryptjs": "^2.4.3",
-    "@ducanh2912/next-pwa": "^10.2.9"
+    "@ducanh2912/next-pwa": "^10.2.9",
+    "resend": "^3.2.0"
   },
   "devDependencies": {
     "typescript": "^5",
