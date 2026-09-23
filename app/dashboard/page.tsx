@@ -27,7 +27,7 @@ function DashboardContent() {
   const [newWeightInput, setNewWeightInput] = useState('');
   const [submittingWeight, setSubmittingWeight] = useState(false);
 
-  // Cargar estado de ayuno y peso al iniciar desde Railway
+  // Cargar el estado real del ayuno y peso desde Railway al iniciar
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -144,7 +144,7 @@ function DashboardContent() {
     }
   };
 
-  // Guardar nuevo registro de peso
+  // Guardar nuevo registro de peso con manejo de errores visible
   const handleAddWeight = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWeightInput || isNaN(Number(newWeightInput))) return;
@@ -157,12 +157,17 @@ function DashboardContent() {
         body: JSON.stringify({ email: userEmail, weight_kg: parseFloat(newWeightInput) })
       });
       const data = await res.json();
+      
       if (data.success) {
         setWeightHistory((prev) => [...prev, data.log]);
         setNewWeightInput('');
+      } else {
+        alert('Error al guardar el peso: ' + (data.error || 'Desconocido'));
+        console.error('Detalle del error:', data);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error guardando peso:', err);
+      alert('Error de conexión al registrar peso: ' + err.message);
     } finally {
       setSubmittingWeight(false);
     }
