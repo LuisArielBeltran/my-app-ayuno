@@ -62,7 +62,6 @@ export async function GET() {
       );
     `);
 
-    // Limpiar y reinsertar los tips de coaching
     await pool.query(`DELETE FROM coaching_tips;`);
     await pool.query(`
       INSERT INTO coaching_tips (phase_hours, goal, title, content) VALUES
@@ -103,43 +102,40 @@ export async function GET() {
       );
     `);
 
-    // 8. Tabla de Recetas y Planificador de Menús (Ampliada)
+    // 8. Tabla de Recetas (Nombre exacto: recipes) para el componente visual y la rotación
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS food_recipes (
+      CREATE TABLE IF NOT EXISTS recipes (
         id SERIAL PRIMARY KEY,
-        category VARCHAR(50) NOT NULL, 
         title VARCHAR(150) NOT NULL,
-        macros VARCHAR(100) NOT NULL, 
-        impact VARCHAR(100) NOT NULL, 
-        icon VARCHAR(10) NOT NULL,    
-        description TEXT NOT NULL,
-        diet_type VARCHAR(50) DEFAULT 'general'
+        category VARCHAR(50) NOT NULL,
+        icon_symbol VARCHAR(10) NOT NULL,
+        prep_time INT NOT NULL,
+        calories INT NOT NULL,
+        ingredients TEXT NOT NULL,
+        instructions TEXT NOT NULL
       );
     `);
 
-    // Limpiar y reinsertar un recetario amplio y variado
-    await pool.query(`DELETE FROM food_recipes;`);
+    // Limpiar y reinsertar un recetario amplio y variado (Romper Ayuno y Comida Principal)
+    await pool.query(`DELETE FROM recipes;`);
     await pool.query(`
-      INSERT INTO food_recipes (category, title, macros, impact, icon, description, diet_type) 
+      INSERT INTO recipes (title, category, icon_symbol, prep_time, calories, ingredients, instructions) 
       VALUES 
       -- Opciones para Romper el Ayuno
-      ('romper_ayuno', 'Omelette de Espinaca y Palta', 'Grasas saludables y Proteína', 'Bajo impacto insulínico', '🍳', 'Evita el pico de azúcar en sangre. Los huevos aportan proteína de alta calidad para mantener la masa muscular, y la palta grasas que prolongan la saciedad por horas.', 'general'),
-      ('romper_ayuno', 'Caldo de Huesos Nutritivo', 'Colágeno y Minerales', 'Reparación intestinal', '🍲', 'Perfecto si hiciste un ayuno profundo. Prepara tu sistema digestivo de forma muy suave, repone los electrolitos perdidos y ayuda a sellar la pared intestinal.', 'general'),
-      ('romper_ayuno', 'Yogur Griego Entero con Nueces y Canela', 'Probióticos y Grasas', 'Digestión ligera', '🥣', 'Opción rica en probióticos naturales. Las nueces añaden grasas omega-3 y la canela ayuda a regular de forma natural la glucosa en sangre.', 'cetogenica'),
-      ('romper_ayuno', 'Batido Verde Keto (Espinaca, Apio y Chía)', 'Fibra y Antioxidantes', 'Cero pico glucémico', '🥤', 'Ideal para una transición suave. Aporta micronutrientes esenciales y semillas de chía que forman un gel protector en el tracto digestivo.', 'detox'),
-      ('romper_ayuno', 'Huevos Revueltos con Aceite de Coco y Tomates Cherry', 'Proteínas y Licopeno', 'Estabilizador hormonal', '🍅', 'Una alternativa rápida, rica en grasas de cadena media que estimulan la energía celular sin interrumpir el estado de bienestar.', 'general'),
-      ('romper_ayuno', 'Pudín de Chía con Leche de Almendras', 'Omega-3 y Fibra Soluble', 'Protección gástrica', '🌰', 'Semillas de chía hidratadas desde la noche anterior con leche vegetal sin azúcar, perfectas para un despertar digestivo calmado.', 'vegano'),
-      ('romper_ayuno', 'Aguacate Relleno con Atún al Limón', 'Grasas y Proteína Marina', 'Saciedad prolongada', '🥑', 'Una combinación excelente de grasas monoinsaturadas y proteína limpia que no genera picos de glucosa.', 'general'),
+      ('Omelette de Espinaca y Palta', 'Romper Ayuno', '🍳', 10, 320, '2 huevos orgánicos, 1 taza de espinacas frescas, 1/2 palta (aguacate), sal y pimienta.', 'Batir los huevos. Saltear las espinacas en una sartén con unas gotas de aceite de oliva hasta que reduzcan, verter los huevos y cocinar doblando en forma de omelette. Servir con la palta en rodajas.'),
+      ('Caldo de Huesos Reparador', 'Romper Ayuno', '🍲', 15, 95, '500ml de caldo de huesos concentrado, una pizca de sal marina, jengibre fresco rallado.', 'Calentar el caldo de huesos a fuego lento en una olla. Añadir el jengibre rallado para estimular la digestión de forma suave. Consumir tibio.'),
+      ('Yogur Griego con Nueces y Canela', 'Romper Ayuno', '🥣', 5, 210, '1 taza de yogur griego entero sin azúcar, 15g de nueces picadas, pizca de canela en polvo.', 'Colocar el yogur en un bol, esparcir las nueces por encima y terminar con una pizca generosa de canela para regular la glucosa.'),
+      ('Batido Verde de Transición', 'Romper Ayuno', '🥤', 7, 150, '1 puñado de espinaca, 1/2 pepino, jugo de medio limón, 1 cucharadita de semillas de chía, agua.', 'Licuar todos los ingredientes hasta obtener una mezcla homogénea y ligera que prepare el sistema digestivo sin picos de insulina.'),
+      ('Huevos Revueltos con Tomates Cherry', 'Romper Ayuno', '🍅', 10, 280, '2 huevos, 5 tomates cherry cortados a la mitad, aceite de coco, albahaca fresca.', 'Saltear los tomates cherry en aceite de coco hasta que estén tiernos. Agregar los huevos batidos y remover suavemente hasta lograr una textura cremosa.'),
+      ('Pudín de Chía Proteico', 'Romper Ayuno', '🌰', 5, 190, '3 cucharadas de semillas de chía, 1 taza de leche de almendras sin azúcar, esencia de vainilla.', 'Mezclar la chía con la leche vegetal desde la noche anterior. Servir frío con unas gotas de vainilla para un despertar digestivo ideal.'),
 
       -- Opciones para Comida Principal
-      ('comida_principal', 'Pollo al Horno con Vegetales Fibrosos', 'Alta Proteína y Fibra', 'Nutrición completa', '🥗', 'Una excelente opción para la mitad de tu ventana de alimentación. La fibra de los vegetales (brócoli, espárragos) ralentiza la absorción de los nutrientes.', 'general'),
-      ('comida_principal', 'Salmón a la Plancha con Espárragos y Aceite de Oliva', 'Omega-3 y Proteína Limpia', 'Salud cardiovascular y cerebral', '🐟', 'Rico en ácidos grasos esenciales que reducen la inflamación sistémica y mantienen la saciedad durante las horas de ayuno posteriores.', 'keto'),
-      ('comida_principal', 'Carne Magra Salteada con Pimientos y Cebolla', 'Proteína de Alta Biodisponibilidad', 'Energía sostenida', '🥩', 'Aporte importante de hierro y zinc, acompañado de pimientos ricos en vitamina C que potencian la absorción de nutrientes.', 'general'),
-      ('comida_principal', 'Pechuga de Pavo en Salsa de Champignones', 'Bajo en Grasas y Alto en Proteínas', 'Control calórico', '🍄', 'Una comida saciante, ligera para el metabolismo y con un perfil de aminoácidos completo ideal para conservar masa muscular.', 'general'),
-      ('comida_principal', 'Ensalada Completa de Atún, Huevo Duro y Aceitunas', 'Proteínas, Grasas y Minerales', 'Refrescante y saciante', '🐟', 'Práctica y veloz. El atún y el huevo cubren tus requerimientos proteicos, mientras las aceitunas aportan sodio saludable y grasas monoinsaturadas.', 'general'),
-      ('comida_principal', 'Wok de Tofu y Brócoli con Jengibre', 'Proteína Vegetal y Fitonutrientes', 'Desintoxicación hepática', '🥦', 'Excelente opción basada en plantas dentro de la ventana de alimentación, condimentada con jengibre para activar la digestión.', 'vegano'),
-      ('comida_principal', 'Bife de Chorizo Magro con Ensalada de Rúcula y Parmesano', 'Alta Proteína y Grasas', 'Nutrición densa', '🥩', 'Corte magro de carne vacuna acompañado de hojas verdes oscuras y escamas de queso parmesano estacionado.', 'general'),
-      ('comida_principal', 'Merluza al Horno con Costra de Hierbas y Puré de Coliflor', 'Proteína Blanca y Bajo Carbohidrato', 'Digestión liviana', '🍽️', 'Pescado blanco de mar horneado con especias finas y acompañado de un puré cremoso de coliflor en lugar de patata.', 'general')
+      ('Pollo al Horno con Brócoli y Oliva', 'Comida Principal', '🥗', 25, 420, '1 pechuga de pollo, 1 taza de brócoli en floretes, 1 cucharada de aceite de oliva, ajo en polvo.', 'Marinar el pollo con especias y hornear a 180°C durante 20 minutos junto con el brócoli previamente rociado con aceite de oliva y sal.'),
+      ('Salmón a la Plancha con Espárragos', 'Comida Principal', '🐟', 18, 480, '1 filete de salmón, 1 atado de espárragos frescos, jugo de limón, aceite de oliva.', 'Sellar el salmón a la plancha con la piel hacia abajo hasta que quede crujiente. Saltear los espárragos en la misma sartén con un toque de limón.'),
+      ('Carne Magra Salteada con Pimientos', 'Comida Principal', '🥩', 20, 450, '150g de corte magro de carne vacuna, 1 pimiento rojo en tiras, cebolla, salsa de soja baja en sodio.', 'Saltear la carne en tiras a fuego vivo con la cebolla y los pimientos. Añadir un chorrito de salsa de soja al final para realzar el sabor.'),
+      ('Pechuga de Pavo con Champignones', 'Comida Principal', '🍄', 22, 380, '150g de pechuga de pavo, 1 taza de champignones laminados, caldo de verduras, hierbas finas.', 'Dorar la pechuga, incorporar los champignones y cocinar a fuego lento con un poco de caldo hasta reducir.'),
+      ('Ensalada Completa de Atún y Huevo', 'Comida Principal', '🥗', 10, 390, '1 lata de atún al agua, 1 huevo duro, hojas de lechuga, aceitunas negras, aceite de oliva virgen extra.', 'Armar una base de lechuga fresca, incorporar el atún escurrido, el huevo duro en gajitos y las aceitunas. Aderezar con aceite de oliva y vinagre.'),
+      ('Wok Vegetal con Tofu', 'Comida Principal', '🥦', 15, 340, '100g de tofu firme en cubos, mix de vegetales (zucchini, zanahoria, brotes de soja), jengibre, aceite de sésamo.', 'Saltear el tofu en cubos hasta que dore. Retirar, saltear los vegetales crujientes con jengibre rallado y reincorporar el tofu al final.')
     `);
 
     // --- SEED DE ALIMENTOS ---
@@ -175,7 +171,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos inicializada con éxito y recetario completo cargado!' 
+      message: '¡Base de datos inicializada y recetario completo sincronizado!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
