@@ -1,41 +1,50 @@
-const compressAndResizeImage = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 800;
-        let width = img.width;
-        let height = img.height;
+export const dynamic = 'force-dynamic';
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
-        // Mantener la proporción original
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
+export async function POST(request: Request) {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ success: false, error: 'Falta configurar la API Key de OpenAI' }, { status: 500 });
+    }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
+    const { imageBase64 } = await request.json();
+    if (!imageBase64) {
+      return NextResponse.json({ success: false, error: 'No se proporcionó ninguna imagen' }, { status: 400 });
+    }
 
-        // Comprimir a JPEG con calidad 0.7 (suficiente para que la IA interprete perfecto)
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-        resolve(compressedDataUrl);
-      };
-      img.onerror = (error) => reject(error);
-    };
-    reader.onerror = (error) => reject(error);
-  });
-};
+    const openai = new OpenAI({ apiKey });
+
+    // Llamada al modelo multimodal (ej. gpt-4o-mini o gpt-4o)
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'Eres un nutriente experto en ayuno intermitente. Analiza la comida de la imagen y responde estrictamente en formato JSON con las siguientes claves: breaks_fast (boolean: true si rompe el ayuno, false si está permitido), food_detected (string con lo que ves), explanation (por qué afecta o no al ayuno metabólico) y suggestion (un consejo breve).'
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: '¿Esta comida rompe mi ayuno y qué componentes tiene?' },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageBase64,
+              },
+            },
+          ],
+        },
+      ],
+      response_format: { type: 'json_object' },
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+
+    return NextResponse.json({ success: true, analysis: result });
+  } catch (error: any) {
+    console.error('Error analizando la imagen con IA:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
