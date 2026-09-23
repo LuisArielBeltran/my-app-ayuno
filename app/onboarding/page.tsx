@@ -40,7 +40,7 @@ export default function OnboardingPage() {
   const startAnalysis = async () => {
     setIsAnalyzing(true);
     try {
-      const response = await fetch('/api/onboarding', {
+      const response = await fetch('/api/save-onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -49,7 +49,6 @@ export default function OnboardingPage() {
       const data = await response.json();
       
       if (data.success) {
-        // Redirigimos a la pantalla de resultados y proyección de peso
         setTimeout(() => {
           router.push('/onboarding/results');
         }, 3000);
@@ -62,7 +61,7 @@ export default function OnboardingPage() {
       setIsAnalyzing(false);
     }
   };
-
+  
   // --- PANTALLAS DEL CUESTIONARIO ---
 
   if (isAnalyzing) {
