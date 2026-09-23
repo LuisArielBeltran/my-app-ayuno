@@ -2,28 +2,43 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getServerSession } from 'next-auth';
+import bcrypt from 'bcryptjs';
 
 export async function POST(req: Request) {
   try {
-    // Obtenemos la sesión actual del usuario
     const session = await getServerSession();
-    
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'No autorizado. Por favor inicia sesión.' }, { status: 401 });
+    const { goal, gender, height, weight, targetWeight, email } = await req.json();
+
+    let userId = null;
+
+    // 1. Si hay una sesión activa, usamos ese usuario
+    if (session && session.user?.email) {
+      const userRes = await pool.query('SELECT id FROM users WHERE email = $1', [session.user.email]);
+      if (userRes.rows.length > 0) {
+        userId = userRes.rows[0].id;
+      }
     }
 
-    // Nota: Dependiendo de cómo guardes la sesión, el id puede estar en session.user.id o necesitamos buscar por email
-    const userEmail = session.user.email;
-    const { goal, gender, height, weight, targetWeight } = await req.json();
-
-    // Buscamos el ID del usuario en Railway mediante su email si el objeto user no incluye el id directamente
-    const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [userEmail]);
-    
-    if (userResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Usuario no encontrado en la base de datos.' }, { status: 404 });
+    // 2. Si no hay sesión pero mandó un email al finalizar el cuestionario, lo buscamos o creamos
+    if (!userId && email) {
+      let userRes = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+      
+      if (userRes.rows.length > 0) {
+        userId = userRes.rows[0].id;
+      } else {
+        // Creamos un usuario rápido por defecto para no romper el flujo del embudo
+        const dummyPassword = await bcrypt.hash('123456', 10);
+        const newUser = await pool.query(
+          'INSERT INTO users (email, password, created_at) VALUES ($1, $2, NOW()) RETURNING id',
+          [email, dummyPassword]
+        );
+        userId = newUser.rows[0].id;
+      }
     }
 
-    const userId = userResult.rows[0].id;
+    if (!userId) {
+      return NextResponse.json({ error: 'Por favor ingresa un correo electrónico válido para guardar tu plan.' }, { status: 400 });
+    }
 
     // Guardamos o actualizamos las métricas del usuario en Railway
     await pool.query(
