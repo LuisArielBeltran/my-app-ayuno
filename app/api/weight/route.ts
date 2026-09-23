@@ -13,10 +13,11 @@ export async function GET(req: Request) {
     }
 
     // 1. Obtener historial de peso existente
-    let weights = await pool.query(
+    const weightsResult = await pool.query(
       `SELECT * FROM weight_logs WHERE email = $1 ORDER BY log_date ASC`,
       [email]
     );
+    let weightRows = weightsResult.rows;
 
     // 2. Obtener el peso inicial y meta desde user_metrics (onboarding)
     const metrics = await pool.query(
@@ -33,19 +34,19 @@ export async function GET(req: Request) {
       targetWeight = metrics.rows[0].target_weight_kg;
 
       // Si no hay historial en weight_logs, pero SÍ hay un peso inicial en el onboarding, lo migramos automáticamente
-      if (weights.rows.length === 0 && metrics.rows[0].initial_weight) {
+      if (weightRows.length === 0 && metrics.rows[0].initial_weight) {
         const initialWeight = metrics.rows[0].initial_weight;
         const insertInitial = await pool.query(
           `INSERT INTO weight_logs (email, weight_kg) VALUES ($1, $2) RETURNING *;`,
           [email, initialWeight]
         );
-        weights = { rows: [insertInitial.rows[0]] };
+        weightRows = [insertInitial.rows[0]];
       }
     }
 
     return NextResponse.json({ 
       success: true, 
-      weights: weights.rows,
+      weights: weightRows,
       target_weight: targetWeight
     });
   } catch (error: any) {
