@@ -32,7 +32,7 @@ export async function GET() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS food_database (
         id SERIAL PRIMARY KEY,
-        food_name VARCHAR(150) UNIQUE NOT NULL,
+        food_name VARCHAR(150) NOT NULL,
         breaks_fast BOOLEAN NOT NULL,
         category VARCHAR(50),
         explanation TEXT,
@@ -40,9 +40,10 @@ export async function GET() {
       );
     `);
 
-    // Asegurar que la columna 'synonyms' exista si la tabla ya fue creada previamente sin ella
+    // Asegurar columna synonyms e índice único para food_name
     await pool.query(`
       ALTER TABLE food_database ADD COLUMN IF NOT EXISTS synonyms TEXT;
+      CREATE UNIQUE INDEX IF NOT EXISTS food_database_name_idx ON food_database (food_name);
     `);
 
     // Limpiar posibles duplicados anteriores en Railway
@@ -116,7 +117,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos actualizada con la columna synonyms y datos cargados con éxito!' 
+      message: '¡Índice único creado y base de datos poblada exitosamente!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
