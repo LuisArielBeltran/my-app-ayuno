@@ -324,6 +324,16 @@ export default function OnboardingPage() {
                 <div className="flex items-center gap-2"><span>📸</span> Asistencia 24/7 de Nutricionista IA por foto</div>
               </div>
 
+              {/* Bloque motivacional añadido */}
+              <div className="bg-indigo-50/60 border border-indigo-100 p-4 rounded-xl text-center space-y-1.5">
+                <p className="text-xs font-bold text-indigo-950 uppercase tracking-wide">
+                  ¡Bien! Vamos a ayudarte a <span className="text-indigo-600">{formData.goal || "alcanzar tu meta"}</span>.
+                </p>
+                <p className="text-[11px] text-gray-600 leading-relaxed">
+                  Hay muchísimas personas que al igual que tú, buscaron un resultado y hoy están felices dado que lo lograron con nuestra ayuda. ¡Tú también puedes lograrlo!
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Correo electrónico para enviar tu plan</label>
                 <input 
@@ -335,8 +345,8 @@ export default function OnboardingPage() {
                 />
               </div>
 
-              <button onClick={nextStep} disabled={!formData.email || !formData.email.includes('@')} className="w-full bg-indigo-600 text-white font-bold text-base py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg">
-                Ver mi Plan y Precios 🚀
+              <button onClick={nextStep} disabled={!formData.email || !formData.email.includes('@')} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-sm uppercase tracking-wider py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg text-center">
+                ¡VAMOS POR TU OBJETIVO! 🚀
               </button>
             </div>
           )}
