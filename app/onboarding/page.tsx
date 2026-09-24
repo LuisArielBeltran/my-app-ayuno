@@ -7,7 +7,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  // Memoria temporal del cuestionario (incluyendo el email)
+  // Memoria temporal ampliada del cuestionario
   const [formData, setFormData] = useState({
     goal: '',
     gender: '',
@@ -15,10 +15,13 @@ export default function OnboardingPage() {
     weight: '',
     targetWeight: '',
     water: '',
+    firstMeal: '09:00',
+    lastMeal: '22:00',
+    dietType: 'omnivore',
     email: ''
   });
 
-  const totalSteps = 6;
+  const totalSteps = 8; // Ampliado para incluir horarios, dieta y resumen pre-pago
   const progress = (step / totalSteps) * 100;
 
   const handleSelect = (field: string, value: string) => {
@@ -27,7 +30,7 @@ export default function OnboardingPage() {
   };
 
   const nextStep = () => {
-    // Validaciones de rangos lógicos antes de avanzar de paso
+    // Validaciones de rangos lógicos
     if (step === 3) {
       const h = parseFloat(formData.height.replace(',', '.'));
       const w = parseFloat(formData.weight.replace(',', '.'));
@@ -78,8 +81,7 @@ export default function OnboardingPage() {
       
       if (data.success) {
         setTimeout(() => {
-          // Redirigir a la pasarela de pago (Checkout) cumpliendo tu regla comercial:
-          // ¡Primero paga, luego crea su contraseña para entrar al tablero!
+          // Redirigir a la pasarela de pago (Checkout) cumpliendo tu regla comercial
           router.push(`/checkout?email=${encodeURIComponent(formData.email)}`);
         }, 3000);
       } else {
@@ -97,8 +99,8 @@ export default function OnboardingPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-8"></div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Analizando parámetros...</h2>
-        <p className="text-gray-500">Diseñando tu plan de acción personalizado basado en tus respuestas.</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Analizando parámetros y construyendo plan...</h2>
+        <p className="text-gray-500">Sincronizando tus objetivos de peso, masa muscular y tipo de dieta.</p>
       </div>
     );
   }
@@ -113,7 +115,7 @@ export default function OnboardingPage() {
             <button onClick={prevStep} disabled={step === 1} className={`text-gray-400 hover:text-gray-800 ${step === 1 ? 'invisible' : ''}`}>
               ← Volver
             </button>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mi Perfil</span>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mi Perfil • Paso {step}/{totalSteps}</span>
             <div className="w-10"></div>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
@@ -124,11 +126,17 @@ export default function OnboardingPage() {
         {/* Contenido Dinámico */}
         <div className="flex-1 px-6 py-8 overflow-y-auto">
           
+          {/* PASO 1: Objetivo Principal (Soporta pérdida de grasa y ganancia muscular) */}
           {step === 1 && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Para empezar, cuéntanos qué quieres lograr:</h2>
               <div className="space-y-3">
-                {['Bajar peso y mantenerme', 'Ganar masa muscular', 'Retrasar el envejecimiento', 'Desintoxicación celular'].map((opcion) => (
+                {[
+                  'Bajar peso y mantenerme', 
+                  'Ganar masa muscular (Volumen limpio)', 
+                  'Retrasar el envejecimiento', 
+                  'Desintoxicación celular'
+                ].map((opcion) => (
                   <button key={opcion} onClick={() => handleSelect('goal', opcion)} className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 transition-all font-medium text-gray-700">
                     {opcion}
                   </button>
@@ -137,6 +145,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* PASO 2: Género */}
           {step === 2 && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cuál es tu género biológico?</h2>
@@ -154,6 +163,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* PASO 3: Medidas Actuales */}
           {step === 3 && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Tus medidas actuales</h2>
@@ -188,11 +198,12 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* PASO 4: Peso Objetivo */}
           {step === 4 && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cuál es tu peso objetivo?</h2>
               <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-6">
-                <p className="text-sm text-green-800 font-medium">💡 Perder un 5% de tu peso corporal ya mejora significativamente la presión arterial y la energía diaria.</p>
+                <p className="text-sm text-green-800 font-medium">💡 Ya sea para definir o ganar masa muscular limpia, fijar tu meta es el primer paso.</p>
               </div>
               <div className="space-y-6">
                 <div>
@@ -213,9 +224,68 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* PASO 5: Horarios Biológicos (Primera y última comida) */}
           {step === 5 && (
+            <div className="animate-fade-in-up space-y-6">
+              <div className="text-center">
+                <span className="text-4xl mb-2 block">⏰</span>
+                <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Tus horarios de alimentación</h2>
+                <p className="text-gray-500 text-sm">Alineamos el ayuno con tu ritmo circadiano natural.</p>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">¿A qué hora es tu primera comida?</label>
+                  <input 
+                    type="time" 
+                    value={formData.firstMeal}
+                    onChange={(e) => setFormData({...formData, firstMeal: e.target.value})}
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl font-bold text-indigo-600 bg-gray-50 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">¿A qué hora es tu última comida?</label>
+                  <input 
+                    type="time" 
+                    value={formData.lastMeal}
+                    onChange={(e) => setFormData({...formData, lastMeal: e.target.value})}
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl font-bold text-indigo-600 bg-gray-50 outline-none"
+                  />
+                </div>
+                <button onClick={nextStep} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 transition-all">
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* PASO 6: Tipo de Dieta (Omnívora, Vegetariana, Vegana) */}
+          {step === 6 && (
             <div className="animate-fade-in-up">
-              <div className="w-full h-40 bg-gray-100 rounded-xl mb-6 flex items-center justify-center text-4xl">💧</div>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cómo prefieres alimentarte?</h2>
+              <p className="text-gray-500 mb-6 text-sm">Adaptaremos el recetario y las proteínas alternativas según tu elección.</p>
+              <div className="space-y-3">
+                {[
+                  { id: 'omnivore', title: '🥩 Omnívora (Incluye carnes y vegetales)', desc: 'Acceso a todo el recetario tradicional y proteico.' },
+                  { id: 'vegetarian', title: '🧀 Vegetariana (Sin carnes, con lácteos/huevos)', desc: 'Proteínas limpias de alta calidad y vegetales.' },
+                  { id: 'vegan', title: '🌱 Vegana (100% basado en plantas)', desc: 'Tofu, legumbres, semillas y alternativas vegetales.' }
+                ].map((item) => (
+                  <button 
+                    key={item.id} 
+                    onClick={() => handleSelect('dietType', item.id)} 
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${formData.dietType === item.id ? 'border-indigo-600 bg-indigo-50' : 'border-gray-100 hover:border-indigo-400'}`}
+                  >
+                    <span className="font-bold text-gray-800 block">{item.title}</span>
+                    <span className="text-xs text-gray-500">{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PASO 7: Hábitos de Agua */}
+          {step === 7 && (
+            <div className="animate-fade-in-up">
+              <div className="w-full h-24 bg-gray-100 rounded-xl mb-4 flex items-center justify-center text-3xl">💧</div>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">¿Cuánta agua bebes al día?</h2>
               <div className="space-y-3">
                 {[
@@ -233,26 +303,41 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {step === 6 && (
-            <div className="animate-fade-in-up">
-              <span className="text-5xl mb-4 block text-center">✉️</span>
-              <h2 className="text-2xl font-extrabold text-gray-900 mb-2 text-center">¿Dónde enviamos tu plan?</h2>
-              <p className="text-gray-500 mb-6 text-sm text-center">Introduce tu correo electrónico para guardar tus resultados y ver tu proyección personalizada.</p>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Correo electrónico</label>
-                  <input 
-                    type="email" 
-                    placeholder="tucorreo@gmail.com" 
-                    value={formData.email} 
-                    onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-lg focus:border-indigo-600 focus:ring-0 outline-none transition-all" 
-                  />
-                </div>
-                <button onClick={nextStep} disabled={!formData.email || !formData.email.includes('@')} className="w-full bg-indigo-600 text-white font-bold text-lg py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg">
-                  Ver mi Plan Personalizado 🚀
-                </button>
+          {/* PASO 8: Pantalla de Resumen Pre-Pago y Correo */}
+          {step === 8 && (
+            <div className="animate-fade-in-up space-y-5">
+              <div className="text-center">
+                <span className="text-4xl mb-2 block">🎯</span>
+                <h2 className="text-2xl font-extrabold text-gray-900">Tu plan personal ha sido generado</h2>
+                <p className="text-gray-500 text-xs mt-1">Hemos diseñado un sistema experto para tu meta.</p>
               </div>
+
+              {/* Tarjeta resumen similar a tu diseño de referencia */}
+              <div className="bg-indigo-50/60 border border-indigo-100 p-4 rounded-xl space-y-2 text-xs text-gray-700">
+                <div className="flex justify-between font-bold text-indigo-900 border-b border-indigo-100 pb-2">
+                  <span>Peso Actual ➔ Meta</span>
+                  <span>{formData.weight || '85'} kg ➔ {formData.targetWeight || '75'} kg</span>
+                </div>
+                <div className="flex items-center gap-2 pt-1"><span>🟢</span> Plan optimizado para <b>{formData.goal || 'Tu objetivo'}</b></div>
+                <div className="flex items-center gap-2"><span>🥗</span> Dieta adaptada: <b className="capitalize">{formData.dietType}</b></div>
+                <div className="flex items-center gap-2"><span>⏰</span> Ventana metabólica sincronizada</div>
+                <div className="flex items-center gap-2"><span>📸</span> Asistencia 24/7 de Nutricionista IA por foto</div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Correo electrónico para enviar tu plan</label>
+                <input 
+                  type="email" 
+                  placeholder="tucorreo@gmail.com" 
+                  value={formData.email} 
+                  onChange={(e) => setFormData({...formData, email: e.target.value})} 
+                  className="w-full p-4 border-2 border-gray-200 rounded-xl text-base focus:border-indigo-600 outline-none transition-all" 
+                />
+              </div>
+
+              <button onClick={nextStep} disabled={!formData.email || !formData.email.includes('@')} className="w-full bg-indigo-600 text-white font-bold text-base py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg">
+                Ver mi Plan y Precios 🚀
+              </button>
             </div>
           )}
 
