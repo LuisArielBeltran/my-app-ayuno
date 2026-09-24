@@ -15,8 +15,8 @@ export const viewport: Viewport = {
 
 // Metadatos y soporte PWA (Android e iOS)
 export const metadata: Metadata = {
-  title: "Mi Ayuno | Tu Coach Metabólico",
-  description: "App nutricional para el control de ayuno y evolución de peso.",
+  title: "TIENES EL CONTROL | Tu Coach Metabólico",
+  description: "App nutricional para el control y evolución de peso.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
