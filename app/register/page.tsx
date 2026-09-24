@@ -22,13 +22,17 @@ function RegisterForm() {
     e.preventDefault();
     setLoading(true);
 
+    // Detectamos la zona horaria local del navegador del usuario
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          password
+          password,
+          timezone: userTimezone // <--- Enviamos el timezone al backend
         })
       });
       const data = await res.json();
@@ -50,7 +54,7 @@ function RegisterForm() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 space-y-6">
         <div className="text-center">
-          <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Último Paso</span>
+          <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Último Paso</span>
           <h1 className="text-2xl font-black text-gray-900 mt-2">Protege tu Cuenta</h1>
           <p className="text-sm text-gray-500 mt-1">Crea una contraseña para asegurar tu plan y acceder cuando quieras.</p>
         </div>
@@ -63,7 +67,7 @@ function RegisterForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-indigo-600 outline-none bg-gray-50"
+              className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-green-600 outline-none bg-gray-50"
               placeholder="tu@correo.com"
             />
           </div>
@@ -75,7 +79,7 @@ function RegisterForm() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-indigo-600 outline-none"
+              className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-green-600 outline-none"
               placeholder="••••••••"
             />
           </div>
@@ -83,14 +87,14 @@ function RegisterForm() {
           <button 
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md"
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all shadow-md"
           >
             {loading ? 'Creando cuenta...' : 'Activar mi Plan y Entrar 🚀'}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-500">
-          ¿Ya tienes cuenta? <a href="/login" className="text-indigo-600 font-bold hover:underline">Inicia sesión</a>
+          ¿Ya tienes cuenta? <a href="/login" className="text-green-600 font-bold hover:underline">Inicia sesión</a>
         </p>
       </div>
     </div>
