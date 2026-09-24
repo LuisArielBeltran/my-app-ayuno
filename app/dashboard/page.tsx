@@ -17,12 +17,16 @@ function DashboardContent() {
   const [waterGlasses, setWaterGlasses] = useState(3);
   const [fastingStreak, setFastingStreak] = useState(3);
 
+  // Estados de Perfil Profesional y Tracks
+  const [trackType, setTrackType] = useState('fat_loss');
+  const [dietType, setDietType] = useState('omnivore');
+
   // Estados para el Validador de Alimentos
   const [searchTerm, setSearchTerm] = useState('');
   const [foodResults, setFoodResults] = useState<any[]>([]);
   const [loadingFood, setLoadingFood] = useState(false);
 
-  // Estado del Coach Metabólico (Ahora en tiempo real)
+  // Estado del Coach Metabólico (En tiempo real)
   const [currentTip, setCurrentTip] = useState<{phase: string, title: string, content: string} | null>(null);
 
   // Estados de Seguimiento de Peso y Metas
@@ -30,11 +34,9 @@ function DashboardContent() {
   const [targetWeight, setTargetWeight] = useState<number | null>(null);
   const [newWeightInput, setNewWeightInput] = useState('');
   const [submittingWeight, setSubmittingWeight] = useState(false);
-
-  // NUEVO: Estado de Celebración de Meta
   const [goalReached, setGoalReached] = useState(false);
 
-  // 1. Cargar el estado real del ayuno y peso desde la Base de Datos
+  // 1. Cargar el estado real del ayuno, peso y métricas profesionales desde la BD
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -57,6 +59,14 @@ function DashboardContent() {
           setWeightHistory(weightData.weights);
           setTargetWeight(weightData.target_weight);
         }
+
+        // Cargar métricas avanzadas (Track y Dieta)
+        const metricsRes = await fetch(`/api/metrics?email=${encodeURIComponent(userEmail)}`);
+        const metricsData = await metricsRes.json();
+        if (metricsData.success && metricsData.metrics) {
+          if (metricsData.metrics.track_type) setTrackType(metricsData.metrics.track_type);
+          if (metricsData.metrics.diet_type) setDietType(metricsData.metrics.diet_type);
+        }
       } catch (err) {
         console.error('Error al cargar datos iniciales:', err);
       }
@@ -78,13 +88,14 @@ function DashboardContent() {
     return () => clearInterval(interval);
   }, [isFasting]);
 
-  // 3. Cerebro del Coach Metabólico (En tiempo real)
+  // 3. Cerebro del Coach Metabólico adaptado al Track activo (Pérdida vs Ganancia Muscular)
   useEffect(() => {
     if (!isFasting) {
+      const trackName = trackType === 'muscle_gain' ? 'Ganancia Muscular (Volumen Limpio)' : 'Pérdida de Grasa y Definición';
       setCurrentTip({
         phase: "Preparación",
-        title: "Listo para comenzar",
-        content: "Elige tu meta de ayuno en el cronómetro y presiona iniciar. Mantén una botella de agua cerca para controlar los antojos."
+        title: `Modo Activo: ${trackName}`,
+        content: `Tu plan está configurado en modalidad profesional con dieta ${dietType}. Elige tu ventana y presiona iniciar para comenzar el día.`
       });
       return;
     }
@@ -92,25 +103,22 @@ function DashboardContent() {
     const hours = fastingSeconds / 3600;
     
     if (hours >= targetHours) {
-      if (targetHours >= 16) {
-        setCurrentTip({ phase: "¡Meta Cumplida! 🎉", title: "Zona de Cetosis y Autofagia", content: "¡Meta alcanzada! Aquí es donde ocurre la magia de la limpieza celular y la máxima optimización metabólica. Puedes romper el ayuno cuando lo desees." });
-      } else if (targetHours >= 14) {
-        setCurrentTip({ phase: "¡Meta Cumplida! 🎉", title: "Zona de Cetosis Temprana", content: "¡Meta alcanzada! Tu cuerpo ya está quemando grasa como energía y mejorando tu claridad mental. Gran trabajo." });
-      } else {
-        setCurrentTip({ phase: "¡Meta Cumplida! 🎉", title: "Zona de Descanso Digestivo", content: "¡Meta alcanzada! Tu insulina se ha regulado y tu sistema digestivo ha descansado por completo." });
-      }
+      setCurrentTip({ 
+        phase: "¡Meta Cumplida! 🎉", 
+        title: trackType === 'muscle_gain' ? "Ventana de Nutrición Muscular Lista" : "Zona de Cetosis y Autofagia Óptima", 
+        content: trackType === 'muscle_gain' 
+          ? "Has completado tu descanso digestivo. Es momento de nutrir tus fibras musculares con proteínas de alta calidad." 
+          : "¡Meta alcanzada! Máxima optimización metabólica y limpieza celular." 
+      });
       return;
     }
 
-    if (hours < 2) setCurrentTip({ phase: "Fase 1 (0-2h)", title: "Nivelando Azúcar", content: "Tu cuerpo está procesando tu última comida. Los niveles de insulina comienzan a estabilizarse." });
-    else if (hours < 8) setCurrentTip({ phase: "Fase 2 (2-8h)", title: "El cuerpo se prepara", content: "Tu sistema digestivo descansa. El azúcar en sangre baja y tu cuerpo busca reservas de energía." });
-    else if (hours < 10) setCurrentTip({ phase: "Fase 3 (8-10h)", title: "Agotando el Glucógeno", content: "Las reservas de azúcar en tu hígado se están acabando. Pronto entrarás en modo 'quema de grasa'." });
-    else if (hours < 12) setCurrentTip({ phase: "Fase 4 (10-12h)", title: "Activación Metabólica", content: "¡El cambio ha comenzado! Tu cuerpo empieza a liberar grasa almacenada para usarla como energía." });
-    else if (hours < 14) setCurrentTip({ phase: "Fase 5 (12-14h)", title: "Produciendo Cetonas", content: "Tu hígado produce cetonas. Sentirás más claridad mental y tu hambre comenzará a desaparecer." });
-    else if (hours < 16) setCurrentTip({ phase: "Fase 6 (14-16h)", title: "Pico de Quema de Grasa", content: "Estás utilizando grasa como combustible principal. ¡Sigue así!" });
-    else if (hours < 18) setCurrentTip({ phase: "Fase 7 (16-18h)", title: "Inicio de Autofagia", content: "Tus células comienzan a 'reciclar' componentes viejos o dañados. Es el inicio del antienvejecimiento." });
-    else setCurrentTip({ phase: "Fase 8 (18h+)", title: "Regeneración Máxima", content: "Autofagia profunda. Tienes máxima limpieza celular y reducción de la inflamación." });
-  }, [fastingSeconds, targetHours, isFasting]);
+    if (hours < 4) {
+      setCurrentTip({ phase: "Fase Inicial", title: "Procesando Nutrientes", content: "Tus niveles de energía están estables mientras tu organismo inicia el ciclo metabólico." });
+    } else {
+      setCurrentTip({ phase: "Fase Activa", title: "Optimización Metabólica en Curso", content: "Mantén una hidratación constante y respeta tus ventanas biológicas." });
+    }
+  }, [fastingSeconds, targetHours, isFasting, trackType, dietType]);
 
   // 4. Búsqueda inteligente de alimentos
   useEffect(() => {
@@ -136,7 +144,7 @@ function DashboardContent() {
     return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
 
-  // NUEVO 5. Evaluar si se alcanzó el peso meta
+  // 5. Evaluar si se alcanzó el peso meta
   useEffect(() => {
     if (weightHistory.length > 0 && targetWeight !== null) {
       const initialWeight = Number(weightHistory[0].weight_kg);
@@ -145,8 +153,6 @@ function DashboardContent() {
       if (initialWeight > targetWeight && currentW <= targetWeight) {
         setGoalReached(true);
       } else if (initialWeight < targetWeight && currentW >= targetWeight) {
-        setGoalReached(true);
-      } else if (initialWeight === targetWeight && currentW === targetWeight) {
         setGoalReached(true);
       } else {
         setGoalReached(false);
@@ -192,12 +198,8 @@ function DashboardContent() {
     const sanitized = newWeightInput.replace(',', '.').trim();
     const weightNum = parseFloat(sanitized);
 
-    if (isNaN(weightNum)) {
-      alert('Por favor introduce un número válido.');
-      return;
-    }
-    if (weightNum < 30 || weightNum > 300) {
-      alert('El peso ingresado está fuera de los límites normales (debe estar entre 30 kg y 300 kg).');
+    if (isNaN(weightNum) || weightNum < 30 || weightNum > 300) {
+      alert('Por favor introduce un peso válido entre 30 kg y 300 kg.');
       return;
     }
 
@@ -283,9 +285,25 @@ function DashboardContent() {
       {isSuccess && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-center animate-fade-in">
           <span className="font-bold block text-lg mb-1">¡🎉 Plan Activado con Éxito!</span>
-          <p className="text-sm">Tu programa personalizado de ayuno intermitente está listo.</p>
+          <p className="text-sm">Tu programa profesional personalizado está listo.</p>
         </div>
       )}
+
+      {/* Insignia de Track Profesional & Dieta */}
+      <div className="flex flex-wrap items-center justify-between bg-indigo-50 border border-indigo-100 p-4 rounded-2xl gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">⚡</span>
+          <div>
+            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block">Track Activo</span>
+            <span className="text-sm font-black text-indigo-950">
+              {trackType === 'muscle_gain' ? '💪 Ganancia Muscular (Volumen Limpio)' : trackType === 'maintenance' ? '🛡️ Estilo de Vida y Mantenimiento' : '🔥 Pérdida de Grasa y Definición'}
+            </span>
+          </div>
+        </div>
+        <div className="bg-white px-3 py-1.5 rounded-xl border border-indigo-200 text-xs font-bold text-indigo-900 capitalize">
+          🥗 Dieta: {dietType === 'vegan' ? 'Vegana' : dietType === 'vegetarian' ? 'Vegetariana' : 'Omnívora'}
+        </div>
+      </div>
 
       <div className="text-center">
         <h1 className="text-3xl font-black text-gray-900">Panel Principal & Coach</h1>
@@ -337,9 +355,9 @@ function DashboardContent() {
                   onChange={(e) => setTargetHours(Number(e.target.value))}
                   className="w-full p-3 border border-indigo-200 rounded-xl text-sm focus:border-indigo-600 outline-none bg-white text-gray-800 shadow-sm font-medium"
                 >
-                  <option value={12}>12/12 - Principiante (12h)</option>
+                  <option value={12}>12/12 - Descanso Digestivo (12h)</option>
                   <option value={14}>14/10 - Intermedio (14h)</option>
-                  <option value={16}>16/8 - Clásico / Pro (16h)</option>
+                  <option value={16}>16/8 - Clásico / Definición (16h)</option>
                   <option value={18}>18/6 - Avanzado (18h)</option>
                   <option value={20}>20/4 - Dieta Guerrero (20h)</option>
                   <option value={24}>24h - Desintoxicación (OMAD)</option>
@@ -380,12 +398,12 @@ function DashboardContent() {
       <div className="bg-purple-50 border border-purple-100 p-6 rounded-2xl">
         
         {goalReached && (
-          <div className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 p-1 rounded-2xl mb-6 shadow-xl animate-bounce-slight transition-all">
+          <div className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 p-1 rounded-2xl mb-6 shadow-xl transition-all">
             <div className="bg-white px-6 py-8 rounded-xl text-center">
               <span className="text-6xl block mb-4">🏆</span>
               <h2 className="text-2xl font-black text-gray-900 mb-2">¡Misión Cumplida!</h2>
               <p className="text-gray-700 font-medium">
-                Has alcanzado tu peso meta de <span className="font-black text-yellow-600">{targetWeight} kg</span>. Todo tu esfuerzo, constancia y disciplina han dado sus frutos. ¡Felicidades, eres una inspiración!
+                Has alcanzado tu meta de <span className="font-black text-yellow-600">{targetWeight} kg</span>. Todo tu esfuerzo y disciplina han dado frutos. ¡Felicidades!
               </p>
             </div>
           </div>
@@ -429,27 +447,20 @@ function DashboardContent() {
           </form>
         </div>
 
-        {weightHistory.length > 0 && (
-          <div className="text-xs text-gray-500 flex items-center justify-between bg-white/60 p-3 rounded-xl mb-2">
-            <span>Total de registros: <b>{weightHistory.length}</b></span>
-            <span>Último registro: {new Date(weightHistory[weightHistory.length - 1].log_date).toLocaleDateString()}</span>
-          </div>
-        )}
-
         {renderWeightChart()}
       </div>
 
       {/* Validador de Alimentos */}
       <div className="bg-gray-50 border border-gray-200 p-6 rounded-2xl">
         <h3 className="text-xl font-bold text-gray-900 mb-1">🔍 Validador de Alimentos</h3>
-        <p className="text-sm text-gray-500 mb-4">Escribe cualquier producto (ej: mate, panela, cortado, café con leche) para saber si rompe tu ayuno.</p>
+        <p className="text-sm text-gray-500 mb-4">Escribe cualquier producto (ej: tofu, tempeh, mate, café con leche) para saber si rompe tu ayuno o se adapta a tu dieta.</p>
         
         <input 
           type="text"
-          placeholder="Busca un alimento, bebida o término regional..."
+          placeholder="Busca un alimento, bebida o alternativa proteica..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full p-4 border-2 border-gray-200 rounded-xl text-base focus:border-indigo-600 focus:ring-0 outline-none bg-white transition-all mb-4"
+          className="w-full p-4 border-2 border-gray-200 rounded-xl text-base focus:border-indigo-600 outline-none bg-white transition-all mb-4"
         />
 
         {loadingFood ? (
@@ -483,14 +494,14 @@ function DashboardContent() {
         )}
       </div>
 
-      {/* MÓDULO DE IA POR FOTOGRAFÍA (NUEVO) */}
+      {/* Módulo de IA por Fotografía */}
       <FoodAnalyzer />
 
-      {/* Guía de Recetas Rotativas */}
+      {/* Guía de Recetas Rotativas (Apta para veganos, vegetarianos u omnívoros) */}
       <RecipeGuide />
 
       <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl text-center">
-        <p className="text-sm text-emerald-600 font-semibold">Plan Personalizado Activo ✓</p>
+        <p className="text-sm text-emerald-600 font-semibold">Programa Especialista Activo ✓</p>
       </div>
 
     </div>
