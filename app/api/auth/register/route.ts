@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(req: Request) {
   try {
-    const { email, password, goal, gender, height_cm, weight_kg, target_weight_kg } = await req.json();
+    const { email, password, goal, gender, height_cm, weight_kg, target_weight_kg, timezone } = await req.json();
 
     if (!email || !password) {
       return NextResponse.json({ success: false, error: 'Email y contraseña requeridos' }, { status: 400 });
@@ -20,10 +20,13 @@ export async function POST(req: Request) {
     // Cifrar la contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insertar usuario
+    // Zona horaria por defecto UTC si el cliente no la envía
+    const userTimezone = timezone || 'UTC';
+
+    // Insertar usuario incluyendo la zona horaria
     const newUser = await pool.query(
-      'INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id, email',
-      [email, hashedPassword]
+      'INSERT INTO users (email, password, timezone) VALUES ($1, $2, $3) RETURNING id, email, timezone',
+      [email, hashedPassword, userTimezone]
     );
 
     const userId = newUser.rows[0].id;
