@@ -1,12 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import RecipeGuide from '@/components/RecipeGuide';
 import FoodAnalyzer from '@/components/FoodAnalyzer';
 import BadgesSection from '@/components/BadgesSection';
+import PushNotificationBanner from '@/components/PushNotificationBanner';
 
 function DashboardContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const isSuccess = searchParams.get('success');
   const userEmail = searchParams.get('email') || 'usuario@ayuno.com';
@@ -283,6 +285,19 @@ function DashboardContent() {
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8 space-y-6">
       
+      {/* Banner para activar Notificaciones Push */}
+      <PushNotificationBanner />
+
+      {/* Botón de acceso rápido a Estadísticas */}
+      <div className="flex justify-end">
+        <button 
+          onClick={() => router.push(`/stats?email=${encodeURIComponent(userEmail)}`)}
+          className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs px-4 py-2.5 rounded-xl transition-all border border-indigo-200 shadow-sm flex items-center gap-2"
+        >
+          📊 Ver Mis Estadísticas y Hábitos
+        </button>
+      </div>
+
       {isSuccess && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-center animate-fade-in">
           <span className="font-bold block text-lg mb-1">¡🎉 Plan Activado con Éxito!</span>
