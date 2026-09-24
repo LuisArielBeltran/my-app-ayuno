@@ -14,7 +14,7 @@ export async function GET() {
       );
     `);
 
-    // 2. Tabla de Métricas del Usuario
+    // 2. Tabla de Métricas del Usuario (Ampliada con perfiles de dieta, tracks y horarios)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_metrics (
         id SERIAL PRIMARY KEY,
@@ -24,8 +24,22 @@ export async function GET() {
         height_cm NUMERIC,
         weight_kg NUMERIC,
         target_weight_kg NUMERIC,
+        diet_type VARCHAR(50) DEFAULT 'omnivore',
+        track_type VARCHAR(50) DEFAULT 'fat_loss',
+        first_meal_time VARCHAR(20) DEFAULT '09:00',
+        last_meal_time VARCHAR(20) DEFAULT '22:00',
+        speed_level VARCHAR(50) DEFAULT 'normal',
         updated_at TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    // Asegurar compatibilidad y columnas nuevas si la tabla ya existía
+    await pool.query(`
+      ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS diet_type VARCHAR(50) DEFAULT 'omnivore';
+      ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS track_type VARCHAR(50) DEFAULT 'fat_loss';
+      ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS first_meal_time VARCHAR(20) DEFAULT '09:00';
+      ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS last_meal_time VARCHAR(20) DEFAULT '22:00';
+      ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS speed_level VARCHAR(50) DEFAULT 'normal';
     `);
 
     // 3. Tabla de Base de Alimentos
@@ -171,7 +185,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos inicializada y recetario completo sincronizado!' 
+      message: '¡Base de datos inicializada con soporte avanzado de perfiles, dietas y metas!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
