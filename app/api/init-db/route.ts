@@ -4,14 +4,20 @@ import pool from '@/lib/db';
 
 export async function GET() {
   try {
-    // 1. Tabla de Usuarios
+    // 1. Tabla de Usuarios (Actualizada con timezone)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        timezone TEXT DEFAULT 'UTC',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // Asegurar compatibilidad si la tabla ya existía
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone TEXT DEFAULT 'UTC';
     `);
 
     // 2. Tabla de Métricas del Usuario (Ampliada con perfiles de dieta, tracks y horarios)
@@ -154,7 +160,7 @@ export async function GET() {
       ('Carne Magra Salteada con Pimientos', 'Comida Principal', '🥩', 20, 450, 40, 12, 18, '150g de corte magro de carne vacuna, 1 pimiento rojo en tiras, cebolla, salsa de soja baja en sodio.', 'Saltear the carne en tiras a fuego vivo con la cebolla y los pimientos. Añadir un chorrito de salsa de soja al final para realzar el sabor.'),
       ('Pechuga de Pavo con Champignones', 'Comida Principal', '🍄', 22, 380, 35, 8, 12, '150g de pechuga de pavo, 1 taza de champignones laminados, caldo de verduras, hierbas finas.', 'Dorar la pechuga, incorporar los champignones y cocinar a fuego lento con un poco de caldo hasta reducir.'),
       ('Ensalada Completa de Atún y Huevo', 'Comida Principal', '🥗', 10, 390, 32, 8, 22, '1 lata de atún al agua, 1 huevo duro, hojas de lechuga, aceitunas negras, aceite de oliva virgen extra.', 'Armar una base de lechuga fresca, incorporar el atún escurrido, el huevo duro en gajitos y las aceitunas. Aderezar con aceite de oliva y vinagre.'),
-      ('Wok Vegetal con Tofu', 'Comida Principal', '🥦', 15, 340, 22, 25, 14, '100g de tofu firme en cubos, mix de vegetales (zucchini, zanahoria, brotes de soja), jengibre, aceite de sésamo.', 'Saltear el tofu en cubos hasta que dore. Retirar, saltear los vegetales crujientes con jengibre rallado y reincorporar el tofu al final.')
+      ('Wok Vegetal con Tofu', 'Comida Principal', '🥦', 15, 340, 22, 25, 14, '100g de tofu firme en cubos, mix de vegetales (zucchini, zanahoria, brotes de soja), jengibre, aceite de sésamo.', 'Saltear the tofu en cubos hasta que dore. Retirar, saltear los vegetales crujientes con jengibre rallado y reincorporar el tofu al final.')
     `);
 
     // 9. Tablas de Gamificación e Insignias
@@ -221,7 +227,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos inicializada perfectamente con todas las columnas de macronutrientes aseguradas!' 
+      message: '¡Base de datos inicializada perfectamente con soporte de zona horaria y macronutrientes asegurados!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
