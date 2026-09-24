@@ -116,7 +116,7 @@ export async function GET() {
       );
     `);
 
-    // 8. Tabla de Recetas (Nombre exacto: recipes) para el componente visual y la rotación
+    // 8. Tabla de Recetas
     await pool.query(`
       CREATE TABLE IF NOT EXISTS recipes (
         id SERIAL PRIMARY KEY,
@@ -130,26 +130,53 @@ export async function GET() {
       );
     `);
 
-    // Limpiar y reinsertar un recetario amplio y variado (Romper Ayuno y Comida Principal)
     await pool.query(`DELETE FROM recipes;`);
     await pool.query(`
       INSERT INTO recipes (title, category, icon_symbol, prep_time, calories, ingredients, instructions) 
       VALUES 
-      -- Opciones para Romper el Ayuno
       ('Omelette de Espinaca y Palta', 'Romper Ayuno', '🍳', 10, 320, '2 huevos orgánicos, 1 taza de espinacas frescas, 1/2 palta (aguacate), sal y pimienta.', 'Batir los huevos. Saltear las espinacas en una sartén con unas gotas de aceite de oliva hasta que reduzcan, verter los huevos y cocinar doblando en forma de omelette. Servir con la palta en rodajas.'),
       ('Caldo de Huesos Reparador', 'Romper Ayuno', '🍲', 15, 95, '500ml de caldo de huesos concentrado, una pizca de sal marina, jengibre fresco rallado.', 'Calentar el caldo de huesos a fuego lento en una olla. Añadir el jengibre rallado para estimular la digestión de forma suave. Consumir tibio.'),
       ('Yogur Griego con Nueces y Canela', 'Romper Ayuno', '🥣', 5, 210, '1 taza de yogur griego entero sin azúcar, 15g de nueces picadas, pizca de canela en polvo.', 'Colocar el yogur en un bol, esparcir las nueces por encima y terminar con una pizca generosa de canela para regular la glucosa.'),
       ('Batido Verde de Transición', 'Romper Ayuno', '🥤', 7, 150, '1 puñado de espinaca, 1/2 pepino, jugo de medio limón, 1 cucharadita de semillas de chía, agua.', 'Licuar todos los ingredientes hasta obtener una mezcla homogénea y ligera que prepare el sistema digestivo sin picos de insulina.'),
       ('Huevos Revueltos con Tomates Cherry', 'Romper Ayuno', '🍅', 10, 280, '2 huevos, 5 tomates cherry cortados a la mitad, aceite de coco, albahaca fresca.', 'Saltear los tomates cherry en aceite de coco hasta que estén tiernos. Agregar los huevos batidos y remover suavemente hasta lograr una textura cremosa.'),
       ('Pudín de Chía Proteico', 'Romper Ayuno', '🌰', 5, 190, '3 cucharadas de semillas de chía, 1 taza de leche de almendras sin azúcar, esencia de vainilla.', 'Mezclar la chía con la leche vegetal desde la noche anterior. Servir frío con unas gotas de vainilla para un despertar digestivo ideal.'),
-
-      -- Opciones para Comida Principal
       ('Pollo al Horno con Brócoli y Oliva', 'Comida Principal', '🥗', 25, 420, '1 pechuga de pollo, 1 taza de brócoli en floretes, 1 cucharada de aceite de oliva, ajo en polvo.', 'Marinar el pollo con especias y hornear a 180°C durante 20 minutos junto con el brócoli previamente rociado con aceite de oliva y sal.'),
       ('Salmón a la Plancha con Espárragos', 'Comida Principal', '🐟', 18, 480, '1 filete de salmón, 1 atado de espárragos frescos, jugo de limón, aceite de oliva.', 'Sellar el salmón a la plancha con la piel hacia abajo hasta que quede crujiente. Saltear los espárragos en la misma sartén con un toque de limón.'),
       ('Carne Magra Salteada con Pimientos', 'Comida Principal', '🥩', 20, 450, '150g de corte magro de carne vacuna, 1 pimiento rojo en tiras, cebolla, salsa de soja baja en sodio.', 'Saltear la carne en tiras a fuego vivo con la cebolla y los pimientos. Añadir un chorrito de salsa de soja al final para realzar el sabor.'),
       ('Pechuga de Pavo con Champignones', 'Comida Principal', '🍄', 22, 380, '150g de pechuga de pavo, 1 taza de champignones laminados, caldo de verduras, hierbas finas.', 'Dorar la pechuga, incorporar los champignones y cocinar a fuego lento con un poco de caldo hasta reducir.'),
       ('Ensalada Completa de Atún y Huevo', 'Comida Principal', '🥗', 10, 390, '1 lata de atún al agua, 1 huevo duro, hojas de lechuga, aceitunas negras, aceite de oliva virgen extra.', 'Armar una base de lechuga fresca, incorporar el atún escurrido, el huevo duro en gajitos y las aceitunas. Aderezar con aceite de oliva y vinagre.'),
       ('Wok Vegetal con Tofu', 'Comida Principal', '🥦', 15, 340, '100g de tofu firme en cubos, mix de vegetales (zucchini, zanahoria, brotes de soja), jengibre, aceite de sésamo.', 'Saltear el tofu en cubos hasta que dore. Retirar, saltear los vegetales crujientes con jengibre rallado y reincorporar el tofu al final.')
+    `);
+
+    // 9. Tablas de Gamificación e Insignias (NUEVO)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS badges (
+        id SERIAL PRIMARY KEY,
+        badge_code VARCHAR(50) UNIQUE NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        description TEXT NOT NULL,
+        icon VARCHAR(10) NOT NULL
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_badges (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        badge_code VARCHAR(50) NOT NULL,
+        unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, badge_code)
+      );
+    `);
+
+    // Seed de Insignias iniciales
+    await pool.query(`
+      INSERT INTO badges (badge_code, title, description, icon) VALUES
+      ('first_fast', 'Primer Ayuno', 'Completa tu primer ciclo de ayuno intermitente.', '⏱️'),
+      ('streak_7', 'Racha de Fuego', 'Mantén una constancia de ayuno durante 7 días seguidos.', '🔥'),
+      ('water_master', 'Maestro del Hidrógeno', 'Registra tus 8 vasos de agua diarios recomendados.', '💧'),
+      ('goal_reached', 'Misión Cumplida', 'Alcanza tu peso objetivo establecido en el plan.', '🏆')
+      ON CONFLICT (badge_code) DO NOTHING;
     `);
 
     // --- SEED DE ALIMENTOS ---
@@ -185,7 +212,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos inicializada con soporte avanzado de perfiles, dietas y metas!' 
+      message: '¡Base de datos inicializada con soporte avanzado de perfiles, dietas, metas y sistema de gamificación!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
