@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import RecipeGuide from '@/components/RecipeGuide';
 import FoodAnalyzer from '@/components/FoodAnalyzer';
+import BadgesSection from '@/components/BadgesSection';
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -449,6 +450,9 @@ function DashboardContent() {
 
         {renderWeightChart()}
       </div>
+
+      {/* Módulo de Logros y Gamificación */}
+      <BadgesSection email={userEmail} />
 
       {/* Validador de Alimentos */}
       <div className="bg-gray-50 border border-gray-200 p-6 rounded-2xl">
