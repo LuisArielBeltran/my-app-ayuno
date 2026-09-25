@@ -1,21 +1,19 @@
 export const dynamic = 'force-dynamic';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
 // Función auxiliar para limpiar comas/puntos y convertir a número de forma segura
 const parseWeightValue = (val: any) => {
   if (typeof val === 'number') return val;
   if (!val && val !== 0) return NaN;
-  // Reemplazar coma por punto y eliminar espacios
   const sanitized = val.toString().replace(',', '.').trim();
   return parseFloat(sanitized);
 };
 
 // GET: Obtener historial de peso y rellenar automáticamente con el peso del onboarding si está vacío
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const email = searchParams.get('email');
+    const email = req.nextUrl.searchParams.get('email');
 
     if (!email) {
       return NextResponse.json({ success: false, error: 'Email no proporcionado' }, { status: 400 });
@@ -67,7 +65,7 @@ export async function GET(req: Request) {
 }
 
 // POST: Registrar un nuevo peso de seguimiento
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { email, weight_kg } = await req.json();
 
@@ -75,15 +73,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Faltan datos obligatorios' }, { status: 400 });
     }
 
-    // Procesar y limpiar el valor (soporta comas y puntos)
     const weightNum = parseWeightValue(weight_kg);
 
-    // Validar que sea un número válido
     if (isNaN(weightNum)) {
       return NextResponse.json({ success: false, error: 'Formato de peso inválido' }, { status: 400 });
     }
 
-    // Validar límites lógicos humanos (debe estar entre 30 kg y 300 kg)
     if (weightNum < 30 || weightNum > 300) {
       return NextResponse.json({ 
         success: false, 
