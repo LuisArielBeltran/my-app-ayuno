@@ -7,10 +7,10 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  // Memoria temporal ampliada del cuestionario (incluyendo método de descenso)
+  // Memoria temporal del cuestionario
   const [formData, setFormData] = useState({
     goal: '',
-    weightLossMethod: 'fasting', // Por defecto ayuno, o 'traditional' si elige método clásico
+    weightLossMethod: 'fasting', // 'fasting' o 'traditional'
     gender: '',
     height: '',
     weight: '',
@@ -22,8 +22,38 @@ export default function OnboardingPage() {
     email: ''
   });
 
-  const totalSteps = 8; // Dinámico según la ruta
+  // Determinar si el usuario eligió bajar de peso
+  const isWeightLoss = formData.goal === 'Bajar peso y mantenerme';
+  
+  // Total de pasos dinámico: 9 si elige bajar de peso (por el selector de método), 8 para los demás
+  const totalSteps = isWeightLoss ? 9 : 8;
   const progress = (step / totalSteps) * 100;
+
+  // Mapeo limpio de pantallas según el paso actual y el objetivo
+  const getScreenType = () => {
+    if (step === 1) return 'goal';
+    if (isWeightLoss) {
+      if (step === 2) return 'weightLossMethod';
+      if (step === 3) return 'gender';
+      if (step === 4) return 'measurements';
+      if (step === 5) return 'targetWeight';
+      if (step === 6) return 'schedule';
+      if (step === 7) return 'diet';
+      if (step === 8) return 'water';
+      if (step === 9) return 'summary';
+    } else {
+      if (step === 2) return 'gender';
+      if (step === 3) return 'measurements';
+      if (step === 4) return 'targetWeight';
+      if (step === 5) return 'schedule';
+      if (step === 6) return 'diet';
+      if (step === 7) return 'water';
+      if (step === 8) return 'summary';
+    }
+    return 'goal';
+  };
+
+  const currentScreen = getScreenType();
 
   const handleSelect = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -31,8 +61,8 @@ export default function OnboardingPage() {
   };
 
   const nextStep = () => {
-    // Validaciones de rangos lógicos
-    if (step === 3) {
+    // Validaciones específicas según la pantalla actual
+    if (currentScreen === 'measurements') {
       const h = parseFloat(formData.height.replace(',', '.'));
       const w = parseFloat(formData.weight.replace(',', '.'));
       if (isNaN(h) || h < 100 || h > 250) {
@@ -45,7 +75,7 @@ export default function OnboardingPage() {
       }
     }
 
-    if (step === 4) {
+    if (currentScreen === 'targetWeight') {
       const tw = parseFloat(formData.targetWeight.replace(',', '.'));
       if (isNaN(tw) || tw < 30 || tw > 300) {
         alert('Por favor ingresa un peso objetivo válido (entre 30 kg y 300 kg).');
@@ -109,7 +139,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-white md:bg-gray-50">
       <div className="max-w-md mx-auto md:mt-10 min-h-screen md:min-h-0 bg-white md:rounded-2xl md:shadow-lg overflow-hidden flex flex-col">
         
-        {/* Header y Barra de Progreso */}
+        {/* Header y Barra de Progreso Sincronizada */}
         <div className="px-6 pt-6 pb-2">
           <div className="flex items-center justify-between mb-4">
             <button onClick={prevStep} disabled={step === 1} className={`text-gray-400 hover:text-gray-800 ${step === 1 ? 'invisible' : ''}`}>
@@ -123,11 +153,11 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        {/* Contenido Dinámico */}
+        {/* Contenido Dinámico según la Pantalla */}
         <div className="flex-1 px-6 py-8 overflow-y-auto">
           
-          {/* PASO 1: Objetivo Principal */}
-          {step === 1 && (
+          {/* 1. OBJETIVO PRINCIPAL */}
+          {currentScreen === 'goal' && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Para empezar, cuéntanos qué quieres lograr:</h2>
               <div className="space-y-3">
@@ -139,10 +169,7 @@ export default function OnboardingPage() {
                 ].map((opcion) => (
                   <button 
                     key={opcion} 
-                    onClick={() => {
-                      setFormData({ ...formData, goal: opcion });
-                      nextStep();
-                    }} 
+                    onClick={() => handleSelect('goal', opcion)} 
                     className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 transition-all font-medium text-gray-700"
                   >
                     {opcion}
@@ -152,28 +179,22 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 1.5 (Condicional): Si quiere bajar de peso, elegimos el método */}
-          {step === 2 && formData.goal === 'Bajar peso y mantenerme' && (
+          {/* 2. MÉTODO DE DESCENSO (Solo si elige bajar de peso) */}
+          {currentScreen === 'weightLossMethod' && (
             <div className="animate-fade-in-up">
               <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Personalización de Descenso</span>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cómo prefieres lograr tu descenso de peso?</h2>
               <p className="text-gray-500 mb-6 text-sm">Adaptaremos la experiencia de tu panel principal a tu comodidad.</p>
               <div className="space-y-3">
                 <button 
-                  onClick={() => {
-                    setFormData({ ...formData, weightLossMethod: 'fasting' });
-                    nextStep();
-                  }}
+                  onClick={() => handleSelect('weightLossMethod', 'fasting')}
                   className={`w-full text-left p-4 rounded-xl border-2 transition-all ${formData.weightLossMethod === 'fasting' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-100 hover:border-indigo-400'}`}
                 >
                   <span className="font-bold text-gray-900 block">⏱️ Ayuno Intermitente</span>
                   <span className="text-xs text-gray-500">Control estricto de ventanas horarias y cronómetro metabólico.</span>
                 </button>
                 <button 
-                  onClick={() => {
-                    setFormData({ ...formData, weightLossMethod: 'traditional' });
-                    nextStep();
-                  }}
+                  onClick={() => handleSelect('weightLossMethod', 'traditional')}
                   className={`w-full text-left p-4 rounded-xl border-2 transition-all ${formData.weightLossMethod === 'traditional' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-100 hover:border-indigo-400'}`}
                 >
                   <span className="font-bold text-gray-900 block">🥗 Método Tradicional / Equilibrado</span>
@@ -183,8 +204,8 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 2: Género (Ajustado dinámicamente si no eligió bajar de peso o si ya pasó la selección de método) */}
-          {((step === 2 && formData.goal !== 'Bajar peso y mantenerme') || step === 3) && (
+          {/* 3. GÉNERO */}
+          {currentScreen === 'gender' && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cuál es tu género biológico?</h2>
               <p className="text-gray-500 mb-6 text-sm">Esta información nos sirve para calcular tu metabolismo basal con precisión médica.</p>
@@ -201,8 +222,8 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 3: Medidas Actuales */}
-          {((step === 3 && formData.goal !== 'Bajar peso y mantenerme') || step === 4) && (
+          {/* 4. MEDIDAS ACTUALES */}
+          {currentScreen === 'measurements' && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Tus medidas actuales</h2>
               <p className="text-gray-500 mb-6 text-sm">Usaremos estos datos para determinar el ritmo al que te conviene avanzar.</p>
@@ -236,8 +257,8 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 4: Peso Objetivo */}
-          {((step === 4 && formData.goal !== 'Bajar peso y mantenerme') || step === 5) && (
+          {/* 5. PESO OBJETIVO */}
+          {currentScreen === 'targetWeight' && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cuál es tu peso objetivo?</h2>
               <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-6">
@@ -262,8 +283,8 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 5: Horarios Biológicos */}
-          {((step === 5 && formData.goal !== 'Bajar peso y mantenerme') || step === 6) && (
+          {/* 6. HORARIOS BIOLÓGICOS */}
+          {currentScreen === 'schedule' && (
             <div className="animate-fade-in-up space-y-6">
               <div className="text-center">
                 <span className="text-4xl mb-2 block">⏰</span>
@@ -296,8 +317,8 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 6: Tipo de Dieta */}
-          {((step === 6 && formData.goal !== 'Bajar peso y mantenerme') || step === 7) && (
+          {/* 7. TIPO DE DIETA */}
+          {currentScreen === 'diet' && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cómo prefieres alimentarte?</h2>
               <p className="text-gray-500 mb-6 text-sm">Adaptaremos el recetario y las proteínas según tu elección.</p>
@@ -320,8 +341,8 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 7: Hábitos de Agua */}
-          {((step === 7 && formData.goal !== 'Bajar peso y mantenerme') || step === 8) && (
+          {/* 8. HÁBITOS DE AGUA */}
+          {currentScreen === 'water' && (
             <div className="animate-fade-in-up">
               <div className="w-full h-24 bg-gray-100 rounded-xl mb-4 flex items-center justify-center text-3xl">💧</div>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">¿Cuánta agua bebes al día?</h2>
@@ -341,8 +362,8 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 8: Pantalla de Resumen Pre-Pago y Correo */}
-          {((step === 8 && formData.goal !== 'Bajar peso y mantenerme') || step === 9 || (formData.goal === 'Bajar peso y mantenerme' && step === 8)) && (
+          {/* 9. RESUMEN Y CORREO (FINAL) */}
+          {currentScreen === 'summary' && (
             <div className="animate-fade-in-up space-y-5">
               <div className="text-center">
                 <span className="text-4xl mb-2 block">🎯</span>
