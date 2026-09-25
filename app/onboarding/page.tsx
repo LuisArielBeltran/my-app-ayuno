@@ -7,9 +7,10 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  // Memoria temporal ampliada del cuestionario
+  // Memoria temporal ampliada del cuestionario (incluyendo método de descenso)
   const [formData, setFormData] = useState({
     goal: '',
+    weightLossMethod: 'fasting', // Por defecto ayuno, o 'traditional' si elige método clásico
     gender: '',
     height: '',
     weight: '',
@@ -21,7 +22,7 @@ export default function OnboardingPage() {
     email: ''
   });
 
-  const totalSteps = 8; // Ampliado para incluir horarios, dieta y resumen pre-pago
+  const totalSteps = 8; // Dinámico según la ruta
   const progress = (step / totalSteps) * 100;
 
   const handleSelect = (field: string, value: string) => {
@@ -81,7 +82,6 @@ export default function OnboardingPage() {
       
       if (data.success) {
         setTimeout(() => {
-          // Redirigir a la pasarela de pago (Checkout) cumpliendo tu regla comercial
           router.push(`/checkout?email=${encodeURIComponent(formData.email)}`);
         }, 3000);
       } else {
@@ -100,7 +100,7 @@ export default function OnboardingPage() {
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-8"></div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Analizando parámetros y construyendo plan...</h2>
-        <p className="text-gray-500">Sincronizando tus objetivos de peso, masa muscular y tipo de dieta.</p>
+        <p className="text-gray-500">Configurando tu asistente proactivo, alertas y metodología elegida.</p>
       </div>
     );
   }
@@ -126,7 +126,7 @@ export default function OnboardingPage() {
         {/* Contenido Dinámico */}
         <div className="flex-1 px-6 py-8 overflow-y-auto">
           
-          {/* PASO 1: Objetivo Principal (Soporta pérdida de grasa y ganancia muscular) */}
+          {/* PASO 1: Objetivo Principal */}
           {step === 1 && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Para empezar, cuéntanos qué quieres lograr:</h2>
@@ -137,7 +137,14 @@ export default function OnboardingPage() {
                   'Retrasar el envejecimiento', 
                   'Desintoxicación celular'
                 ].map((opcion) => (
-                  <button key={opcion} onClick={() => handleSelect('goal', opcion)} className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 transition-all font-medium text-gray-700">
+                  <button 
+                    key={opcion} 
+                    onClick={() => {
+                      setFormData({ ...formData, goal: opcion });
+                      nextStep();
+                    }} 
+                    className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 transition-all font-medium text-gray-700"
+                  >
                     {opcion}
                   </button>
                 ))}
@@ -145,8 +152,39 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 2: Género */}
-          {step === 2 && (
+          {/* PASO 1.5 (Condicional): Si quiere bajar de peso, elegimos el método */}
+          {step === 2 && formData.goal === 'Bajar peso y mantenerme' && (
+            <div className="animate-fade-in-up">
+              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Personalización de Descenso</span>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cómo prefieres lograr tu descenso de peso?</h2>
+              <p className="text-gray-500 mb-6 text-sm">Adaptaremos la experiencia de tu panel principal a tu comodidad.</p>
+              <div className="space-y-3">
+                <button 
+                  onClick={() => {
+                    setFormData({ ...formData, weightLossMethod: 'fasting' });
+                    nextStep();
+                  }}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${formData.weightLossMethod === 'fasting' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-100 hover:border-indigo-400'}`}
+                >
+                  <span className="font-bold text-gray-900 block">⏱️ Ayuno Intermitente</span>
+                  <span className="text-xs text-gray-500">Control estricto de ventanas horarias y cronómetro metabólico.</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setFormData({ ...formData, weightLossMethod: 'traditional' });
+                    nextStep();
+                  }}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${formData.weightLossMethod === 'traditional' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-100 hover:border-indigo-400'}`}
+                >
+                  <span className="font-bold text-gray-900 block">🥗 Método Tradicional / Equilibrado</span>
+                  <span className="text-xs text-gray-500">Comidas fraccionadas a lo largo del día sin restricciones horarias de ayuno.</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* PASO 2: Género (Ajustado dinámicamente si no eligió bajar de peso o si ya pasó la selección de método) */}
+          {((step === 2 && formData.goal !== 'Bajar peso y mantenerme') || step === 3) && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cuál es tu género biológico?</h2>
               <p className="text-gray-500 mb-6 text-sm">Esta información nos sirve para calcular tu metabolismo basal con precisión médica.</p>
@@ -164,7 +202,7 @@ export default function OnboardingPage() {
           )}
 
           {/* PASO 3: Medidas Actuales */}
-          {step === 3 && (
+          {((step === 3 && formData.goal !== 'Bajar peso y mantenerme') || step === 4) && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Tus medidas actuales</h2>
               <p className="text-gray-500 mb-6 text-sm">Usaremos estos datos para determinar el ritmo al que te conviene avanzar.</p>
@@ -199,7 +237,7 @@ export default function OnboardingPage() {
           )}
 
           {/* PASO 4: Peso Objetivo */}
-          {step === 4 && (
+          {((step === 4 && formData.goal !== 'Bajar peso y mantenerme') || step === 5) && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cuál es tu peso objetivo?</h2>
               <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-6">
@@ -224,13 +262,13 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 5: Horarios Biológicos (Primera y última comida) */}
-          {step === 5 && (
+          {/* PASO 5: Horarios Biológicos */}
+          {((step === 5 && formData.goal !== 'Bajar peso y mantenerme') || step === 6) && (
             <div className="animate-fade-in-up space-y-6">
               <div className="text-center">
                 <span className="text-4xl mb-2 block">⏰</span>
                 <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Tus horarios de alimentación</h2>
-                <p className="text-gray-500 text-sm">Alineamos el ayuno con tu ritmo circadiano natural.</p>
+                <p className="text-gray-500 text-sm">Alineamos tus ventanas nutricionales con tus hábitos diarios.</p>
               </div>
               <div className="space-y-4">
                 <div>
@@ -258,11 +296,11 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* PASO 6: Tipo de Dieta (Omnívora, Vegetariana, Vegana) */}
-          {step === 6 && (
+          {/* PASO 6: Tipo de Dieta */}
+          {((step === 6 && formData.goal !== 'Bajar peso y mantenerme') || step === 7) && (
             <div className="animate-fade-in-up">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cómo prefieres alimentarte?</h2>
-              <p className="text-gray-500 mb-6 text-sm">Adaptaremos el recetario y las proteínas alternativas según tu elección.</p>
+              <p className="text-gray-500 mb-6 text-sm">Adaptaremos el recetario y las proteínas según tu elección.</p>
               <div className="space-y-3">
                 {[
                   { id: 'omnivore', title: '🥩 Omnívora (Incluye carnes y vegetales)', desc: 'Acceso a todo el recetario tradicional y proteico.' },
@@ -283,7 +321,7 @@ export default function OnboardingPage() {
           )}
 
           {/* PASO 7: Hábitos de Agua */}
-          {step === 7 && (
+          {((step === 7 && formData.goal !== 'Bajar peso y mantenerme') || step === 8) && (
             <div className="animate-fade-in-up">
               <div className="w-full h-24 bg-gray-100 rounded-xl mb-4 flex items-center justify-center text-3xl">💧</div>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">¿Cuánta agua bebes al día?</h2>
@@ -304,33 +342,33 @@ export default function OnboardingPage() {
           )}
 
           {/* PASO 8: Pantalla de Resumen Pre-Pago y Correo */}
-          {step === 8 && (
+          {((step === 8 && formData.goal !== 'Bajar peso y mantenerme') || step === 9 || (formData.goal === 'Bajar peso y mantenerme' && step === 8)) && (
             <div className="animate-fade-in-up space-y-5">
               <div className="text-center">
                 <span className="text-4xl mb-2 block">🎯</span>
                 <h2 className="text-2xl font-extrabold text-gray-900">Tu plan personal ha sido generado</h2>
-                <p className="text-gray-500 text-xs mt-1">Hemos diseñado un sistema experto para tu meta.</p>
+                <p className="text-gray-500 text-xs mt-1">Hemos diseñado un sistema experto para tu meta y estilo.</p>
               </div>
 
-              {/* Tarjeta resumen similar a tu diseño de referencia */}
               <div className="bg-indigo-50/60 border border-indigo-100 p-4 rounded-xl space-y-2 text-xs text-gray-700">
                 <div className="flex justify-between font-bold text-indigo-900 border-b border-indigo-100 pb-2">
                   <span>Peso Actual ➔ Meta</span>
                   <span>{formData.weight || '85'} kg ➔ {formData.targetWeight || '75'} kg</span>
                 </div>
-                <div className="flex items-center gap-2 pt-1"><span>🟢</span> Plan optimizado para <b>{formData.goal || 'Tu objetivo'}</b></div>
+                <div className="flex items-center gap-2 pt-1"><span>🟢</span> Objetivo: <b>{formData.goal || 'Tu objetivo'}</b></div>
+                {formData.goal === 'Bajar peso y mantenerme' && (
+                  <div className="flex items-center gap-2"><span>⚡</span> Método: <b className="capitalize">{formData.weightLossMethod === 'fasting' ? 'Ayuno Intermitente' : 'Método Tradicional'}</b></div>
+                )}
                 <div className="flex items-center gap-2"><span>🥗</span> Dieta adaptada: <b className="capitalize">{formData.dietType}</b></div>
-                <div className="flex items-center gap-2"><span>⏰</span> Ventana metabólica sincronizada</div>
-                <div className="flex items-center gap-2"><span>📸</span> Asistencia 24/7 de Nutricionista IA por foto</div>
+                <div className="flex items-center gap-2"><span>📸</span> Asistencia 24/7 de Nutricionista IA por foto y Coach Proactivo</div>
               </div>
 
-              {/* Bloque motivacional añadido */}
               <div className="bg-indigo-50/60 border border-indigo-100 p-4 rounded-xl text-center space-y-1.5">
                 <p className="text-xs font-bold text-indigo-950 uppercase tracking-wide">
-                  ¡Bien! Vamos a ayudarte a <span className="text-indigo-600">{formData.goal || "alcanzar tu meta"}</span>.
+                  ¡Vamos a ayudarte a <span className="text-indigo-600">{formData.goal || "alcanzar tu meta"}</span>!
                 </p>
                 <p className="text-[11px] text-gray-600 leading-relaxed">
-                  Hay muchísimas personas que al igual que tú, buscaron un resultado y hoy están felices dado que lo lograron con nuestra ayuda. ¡Tú también puedes lograrlo!
+                  Nuestro coach insistente y proactivo estará recordándote tus tomas de agua y colaciones para que nunca te sientas solo en el proceso.
                 </p>
               </div>
 
@@ -345,7 +383,7 @@ export default function OnboardingPage() {
                 />
               </div>
 
-              <button onClick={nextStep} disabled={!formData.email || !formData.email.includes('@')} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-sm uppercase tracking-wider py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg text-center">
+              <button onClick={startAnalysis} disabled={!formData.email || !formData.email.includes('@')} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-sm uppercase tracking-wider py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg text-center">
                 ¡VAMOS POR TU OBJETIVO! 🚀
               </button>
             </div>
