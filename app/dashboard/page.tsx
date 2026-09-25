@@ -1,32 +1,169 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import RecipeGuide from '@/components/RecipeGuide';
 import FoodAnalyzer from '@/components/FoodAnalyzer';
 import BadgesSection from '@/components/BadgesSection';
 import PushNotificationBanner from '@/components/PushNotificationBanner';
-import AICoachChat from '@/components/AICoachChat'; // <--- Importamos el chat flotante del Coach IA
 
+// ==========================================
+// COMPONENTE INTEGRADO: Coach IA Flotante
+// ==========================================
+function AICoachChat({ email }: { email: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: 'assistant', text: '¡Hola! Soy tu coach personal de "TIENES EL CONTROL". Estoy aquí 24/7 para resolver cualquier duda sobre tu dieta, tus porciones, el ayuno o si tienes un antojo repentino. ¿En qué te ayudo ahora? 💪' }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      scrollToBottom();
+    }
+  }, [messages, isOpen]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputMessage.trim() || loading) return;
+
+    const userText = inputMessage;
+    setInputMessage('');
+    setMessages((prev) => [...prev, { role: 'user', text: userText }]);
+    setLoading(true);
+
+    try {
+      setTimeout(() => {
+        let assistantReply = "¡Entiendo perfecto! Recuerda mantener tu hidratación alta y seguir tu plan de objetivos. ¿Te gustaría que revisemos alguna de las recetas recomendadas para este momento?";
+        
+        const lower = userText.toLowerCase();
+        if (lower.includes('hambre') || lower.includes('ansiedad') || lower.includes('comer')) {
+          assistantReply = "Es completamente normal sentir un poco de ansiedad al principio. Prueba tomando un vaso grande de agua con unas gotas de limón o un té verde sin azúcar. ¡Tú tienes el control, no la comida! 💧";
+        } else if (lower.includes('agua') || lower.includes('cuanto')) {
+          assistantReply = "Te recomiendo apuntar a tus 8 vasos diarios. Si estás en movimiento o entrenando, ¡necesitas un poco más para mantener el metabolismo al 100%!";
+        } else if (lower.includes('romper') || lower.includes('ayuno')) {
+          assistantReply = "Si vas a romper tu ayuno, hazlo con proteínas limpias o grasas saludables (como huevos, palta o un caldo de huesos) para evitar picos de insulina bruscos.";
+        }
+
+        setMessages((prev) => [...prev, { role: 'assistant', text: assistantReply }]);
+        setLoading(false);
+      }, 1000);
+
+    } catch (err) {
+      console.error(err);
+      setMessages((prev) => [...prev, { role: 'assistant', text: 'Ups, tuve un pequeño problema de conexión, pero estoy aquí contigo. Inténtalo de nuevo en un segundito.' }]);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white p-4 rounded-full shadow-2xl flex items-center gap-3 transition-all transform hover:scale-105 group"
+        >
+          <span className="text-2xl animate-bounce">🤖</span>
+          <span className="font-bold text-sm tracking-wide pr-2 hidden md:inline">¿Hablamos con tu Coach?</span>
+        </button>
+      )}
+
+      {isOpen && (
+        <div className="bg-white w-[90vw] sm:w-[380px] h-[500px] rounded-3xl shadow-2xl border border-indigo-100 flex flex-col overflow-hidden animate-fade-in-up">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
+                🧠
+              </div>
+              <div>
+                <h4 className="font-bold text-sm">Coach TIENES EL CONTROL</h4>
+                <span className="text-[10px] text-indigo-200 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> En línea 24/7
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-white/80 hover:text-white text-xl font-bold px-2 py-1"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] p-3.5 rounded-2xl text-xs leading-relaxed shadow-sm ${
+                    msg.role === 'user'
+                      ? 'bg-indigo-600 text-white rounded-br-none'
+                      : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="bg-white p-3 rounded-2xl border border-gray-100 text-xs text-gray-400 animate-pulse">
+                  El coach está escribiendo...
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-gray-100 flex gap-2">
+            <input
+              type="text"
+              placeholder="Pregúntale algo a tu coach..."
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              className="flex-1 p-3 border border-gray-200 rounded-xl text-xs focus:border-indigo-600 outline-none bg-gray-50"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 rounded-xl text-xs font-bold transition-all shadow-md disabled:opacity-50"
+            >
+              Enviar
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// DASHBOARD PRINCIPAL
+// ==========================================
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isSuccess = searchParams.get('success');
   const userEmail = searchParams.get('email') || 'usuario@ayuno.com';
 
-  // Estados interactivos para el cronómetro y el agua
   const [isFasting, setIsFasting] = useState(false);
   const [fastingSeconds, setFastingSeconds] = useState(0);
   const [targetHours, setTargetHours] = useState<number>(16);
   const [waterGlasses, setWaterGlasses] = useState(3);
   const [fastingStreak, setFastingStreak] = useState(3);
 
-  // Estados de Perfil Profesional, Tracks y Método de Descenso
   const [trackType, setTrackType] = useState('fat_loss');
   const [dietType, setDietType] = useState('omnivore');
-  const [weightLossMethod, setWeightLossMethod] = useState('fasting'); // 'fasting' o 'traditional'
+  const [weightLossMethod, setWeightLossMethod] = useState('fasting');
 
-  // Estados para el Registro de Comidas del Método Tradicional o Volumen
   const [mealsLogged, setMealsLogged] = useState({
     breakfast: false,
     lunch: false,
@@ -34,22 +171,18 @@ function DashboardContent() {
     dinner: false
   });
 
-  // Estados para el Validador de Alimentos
   const [searchTerm, setSearchTerm] = useState('');
   const [foodResults, setFoodResults] = useState<any[]>([]);
   const [loadingFood, setLoadingFood] = useState(false);
 
-  // Estado del Coach Metabólico (En tiempo real y proactivo)
   const [currentTip, setCurrentTip] = useState<{phase: string, title: string, content: string} | null>(null);
 
-  // Estados de Seguimiento de Peso y Metas
   const [weightHistory, setWeightHistory] = useState<any[]>([]);
   const [targetWeight, setTargetWeight] = useState<number | null>(null);
   const [newWeightInput, setNewWeightInput] = useState('');
   const [submittingWeight, setSubmittingWeight] = useState(false);
   const [goalReached, setGoalReached] = useState(false);
 
-  // 1. Cargar el estado real desde la BD (Incluyendo track_type, diet_type y weight_loss_method)
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -73,7 +206,6 @@ function DashboardContent() {
           setTargetWeight(weightData.target_weight);
         }
 
-        // Cargar métricas avanzadas profesionales
         const metricsRes = await fetch(`/api/metrics?email=${encodeURIComponent(userEmail)}`);
         const metricsData = await metricsRes.json();
         if (metricsData.success && metricsData.metrics) {
@@ -89,7 +221,6 @@ function DashboardContent() {
     fetchInitialData();
   }, [userEmail]);
 
-  // 2. Lógica del Cronómetro de Ayuno (Solo si aplica)
   useEffect(() => {
     let interval: any = null;
     if (isFasting && weightLossMethod === 'fasting' && trackType === 'fat_loss') {
@@ -102,7 +233,6 @@ function DashboardContent() {
     return () => clearInterval(interval);
   }, [isFasting, weightLossMethod, trackType]);
 
-  // 3. Cerebro del Coach Metabólico adaptado al Track y Metodología activa
   useEffect(() => {
     if (trackType === 'muscle_gain') {
       setCurrentTip({
@@ -131,7 +261,6 @@ function DashboardContent() {
       return;
     }
 
-    // Si es Ayuno Intermitente
     if (!isFasting) {
       setCurrentTip({
         phase: "Preparación",
@@ -158,7 +287,6 @@ function DashboardContent() {
     }
   }, [fastingSeconds, targetHours, isFasting, trackType, dietType, weightLossMethod]);
 
-  // 4. Búsqueda inteligente de alimentos
   useEffect(() => {
     const delayDebounce = setTimeout(async () => {
       if (!searchTerm.trim()) {
@@ -182,7 +310,6 @@ function DashboardContent() {
     return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
 
-  // 5. Evaluar si se alcanzó el peso meta
   useEffect(() => {
     if (weightHistory.length > 0 && targetWeight !== null) {
       const initialWeight = Number(weightHistory[0].weight_kg);
@@ -326,10 +453,8 @@ function DashboardContent() {
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8 space-y-6 relative">
       
-      {/* Banner para activar Notificaciones Push e Insistentes */}
       <PushNotificationBanner />
 
-      {/* Botón de acceso rápido a Estadísticas */}
       <div className="flex justify-end">
         <button 
           onClick={() => router.push(`/stats?email=${encodeURIComponent(userEmail)}`)}
@@ -346,7 +471,6 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Insignia de Track Profesional & Dieta */}
       <div className="flex flex-wrap items-center justify-between bg-indigo-50 border border-indigo-100 p-4 rounded-2xl gap-2">
         <div className="flex items-center gap-2">
           <span className="text-xl">⚡</span>
@@ -380,10 +504,7 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* RENDERIZADO CONDICIONAL DE LA TARJETA PRINCIPAL SEGÚN EL TRACK Y MÉTODO */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {/* OPCIÓN A: Si es Ayuno Intermitente */}
         {trackType === 'fat_loss' && weightLossMethod === 'fasting' ? (
           <div className={`border p-6 rounded-2xl flex flex-col justify-between transition-all ${isFasting ? 'bg-indigo-900 text-white border-indigo-900 shadow-lg' : 'bg-indigo-50 border-indigo-100 text-gray-900'}`}>
             <div>
@@ -433,7 +554,6 @@ function DashboardContent() {
             </button>
           </div>
         ) : (
-          /* OPCIÓN B: Método Tradicional, Ganancia Muscular o Mantenimiento (Sin Cronómetro de Ayuno) */
           <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col justify-between">
             <div>
               <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">
@@ -467,7 +587,6 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* Tarjeta de Hidratación Proactiva */}
         <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl flex flex-col justify-between">
           <div>
             <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">Hidratación Constante</span>
@@ -485,12 +604,9 @@ function DashboardContent() {
             + Registrar Vaso de Agua 💧
           </button>
         </div>
-
       </div>
 
-      {/* Módulo de Seguimiento de Peso */}
       <div className="bg-purple-50 border border-purple-100 p-6 rounded-2xl">
-        
         {goalReached && (
           <div className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 p-1 rounded-2xl mb-6 shadow-xl transition-all">
             <div className="bg-white px-6 py-8 rounded-xl text-center">
@@ -544,10 +660,8 @@ function DashboardContent() {
         {renderWeightChart()}
       </div>
 
-      {/* Módulo de Logros y Gamificación */}
       <BadgesSection email={userEmail} />
 
-      {/* Validador de Alimentos */}
       <div className="bg-gray-50 border border-gray-200 p-6 rounded-2xl">
         <h3 className="text-xl font-bold text-gray-900 mb-1">🔍 Validador de Alimentos</h3>
         <p className="text-sm text-gray-500 mb-4">Escribe cualquier producto (ej: tofu, tempeh, mate, café con leche) para analizar su compatibilidad con tu dieta.</p>
@@ -591,17 +705,14 @@ function DashboardContent() {
         )}
       </div>
 
-      {/* Módulo de IA por Fotografía */}
       <FoodAnalyzer />
-
-      {/* Guía de Recetas Rotativas */}
       <RecipeGuide />
 
       <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl text-center">
         <p className="text-sm text-emerald-600 font-semibold">Programa Especialista Adaptativo Activo ✓</p>
       </div>
 
-      {/* Widget flotante del Coach IA */}
+      {/* Renderizado del Coach IA integrado */}
       <AICoachChat email={userEmail} />
 
     </div>
