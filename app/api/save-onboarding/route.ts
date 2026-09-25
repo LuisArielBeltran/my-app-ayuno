@@ -6,7 +6,14 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession();
+    // Intentamos obtener la sesión de forma segura (evita el error 'Invalid URL' si falta NEXTAUTH_URL en Vercel)
+    let session = null;
+    try {
+      session = await getServerSession();
+    } catch (authErr) {
+      console.warn('Aviso: No se pudo obtener la sesión de NextAuth automáticamente:', authErr);
+    }
+
     const { 
       goal, 
       gender, 
@@ -17,7 +24,7 @@ export async function POST(req: Request) {
       firstMeal, 
       lastMeal, 
       dietType,
-      weightLossMethod // <--- Capturamos el método de descenso preferido
+      weightLossMethod 
     } = await req.json();
 
     let userId = null;
@@ -61,7 +68,7 @@ export async function POST(req: Request) {
       trackType = 'maintenance';
     }
 
-    // 4. Guardamos o actualizamos las métricas avanzadas del usuario en Railway (incluyendo weight_loss_method)
+    // 4. Guardamos o actualizamos las métricas avanzadas del usuario en Railway
     await pool.query(
       `INSERT INTO user_metrics (user_id, goal, gender, height_cm, weight_kg, target_weight_kg, diet_type, track_type, weight_loss_method, first_meal_time, last_meal_time, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
@@ -93,7 +100,7 @@ export async function POST(req: Request) {
       ]
     );
 
-    // 5. Registrar el peso inicial en el historial de peso (para que la gráfica del dashboard funcione al entrar)
+    // 5. Registrar el peso inicial en el historial de peso
     if (weight && targetEmail) {
       await pool.query(
         'INSERT INTO weight_logs (email, weight_kg) VALUES ($1, $2)',
