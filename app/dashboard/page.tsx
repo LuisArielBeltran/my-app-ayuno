@@ -46,7 +46,7 @@ function AICoachChat({ email }: { email: string }) {
         if (lower.includes('hambre') || lower.includes('ansiedad') || lower.includes('comer')) {
           assistantReply = "Es completamente normal sentir un poco de ansiedad al principio. Prueba tomando un vaso grande de agua con unas gotas de limón o un té verde sin azúcar. ¡Tú tienes el control, no la comida! 💧";
         } else if (lower.includes('agua') || lower.includes('cuanto')) {
-          assistantReply = "Te recomiendo apuntar a tus 8 vasos diarios. Si estás en movimiento o entrenando, ¡necesitas un poco más para mantener el metabolismo al 100%!";
+          assistantReply = "Te recomiendo apuntar a tus vasos diarios calculados según tu peso. Si estás en movimiento o entrenando, ¡necesitas un poco más para mantener el metabolismo al 100%!";
         } else if (lower.includes('romper') || lower.includes('ayuno')) {
           assistantReply = "Si vas a romper tu ayuno, hazlo con proteínas limpias o grasas saludables (como huevos, palta o un caldo de huesos) para evitar picos de insulina bruscos.";
         }
@@ -158,6 +158,7 @@ function DashboardContent() {
   const [fastingSeconds, setFastingSeconds] = useState(0);
   const [targetHours, setTargetHours] = useState<number>(16);
   const [waterGlasses, setWaterGlasses] = useState(3);
+  const [waterTarget, setWaterTarget] = useState<number>(8); // Meta dinámica de agua basada en el peso
   const [fastingStreak, setFastingStreak] = useState(3);
 
   const [trackType, setTrackType] = useState('fat_loss');
@@ -204,6 +205,13 @@ function DashboardContent() {
         if (weightData.success) {
           setWeightHistory(weightData.weights);
           setTargetWeight(weightData.target_weight);
+
+          // Calcular la meta de agua dinámicamente según el peso actual
+          if (weightData.weights && weightData.weights.length > 0) {
+            const currentW = Number(weightData.weights[weightData.weights.length - 1].weight_kg) || 70;
+            const calculatedGlasses = Math.round((currentW * 35) / 250);
+            setWaterTarget(calculatedGlasses);
+          }
         }
 
         const metricsRes = await fetch(`/api/metrics?email=${encodeURIComponent(userEmail)}`);
@@ -314,6 +322,10 @@ function DashboardContent() {
     if (weightHistory.length > 0 && targetWeight !== null) {
       const initialWeight = Number(weightHistory[0].weight_kg);
       const currentW = Number(weightHistory[weightHistory.length - 1].weight_kg);
+
+      // Actualizar meta de agua si el peso cambia
+      const calculatedGlasses = Math.round((currentW * 35) / 250);
+      setWaterTarget(calculatedGlasses);
 
       if (initialWeight > targetWeight && currentW <= targetWeight) {
         setGoalReached(true);
@@ -662,7 +674,9 @@ function DashboardContent() {
             <h3 className="text-xl font-bold text-gray-900 mb-2">Registro de Agua</h3>
             <div className="my-3 flex items-center justify-between bg-white/80 p-3 rounded-xl border border-blue-100">
               <span className="text-sm font-semibold text-gray-600">Vasos hoy:</span>
-              <span className="text-2xl font-black text-blue-600">{waterGlasses} <span className="text-xs font-normal text-gray-400">/ 8 vasos</span></span>
+              <span className="text-2xl font-black text-blue-600">
+                {waterGlasses} <span className="text-xs font-normal text-gray-400">/ {waterTarget} vasos</span>
+              </span>
             </div>
             <p className="text-[11px] text-blue-700 italic">💡 El coach te recordará beber agua periódicamente para evitar la fatiga.</p>
           </div>
