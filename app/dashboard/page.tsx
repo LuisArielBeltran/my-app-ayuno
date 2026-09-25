@@ -455,6 +455,37 @@ function DashboardContent() {
       
       <PushNotificationBanner />
 
+      {/* 🧪 Módulo de Prueba de Notificaciones Inteligentes */}
+      <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+        <div>
+          <h4 className="font-bold text-sm text-amber-900">🧪 Zona de Pruebas del Coach Inteligente</h4>
+          <p className="text-xs text-amber-700 mt-0.5">Envía una alerta push de prueba calculando tus vasos de agua según tu peso real.</p>
+        </div>
+        <button
+          onClick={async () => {
+            try {
+              const res = await fetch('/api/push/smart-alert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmail, alertType: 'water' })
+              });
+              const data = await res.json();
+              if (data.success) {
+                alert(`¡Alerta enviada con éxito! Meta calculada: ${data.waterTargetGlasses} vasos de agua.`);
+              } else {
+                alert('Aviso: ' + (data.error || 'Asegúrate de activar las notificaciones primero con el botón de arriba.'));
+              }
+            } catch (err) {
+              console.error(err);
+              alert('Error de conexión al enviar la alerta de prueba.');
+            }
+          }}
+          className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md whitespace-nowrap"
+        >
+          Probar Alerta Push 💧
+        </button>
+      </div>
+
       <div className="flex justify-end">
         <button 
           onClick={() => router.push(`/stats?email=${encodeURIComponent(userEmail)}`)}
