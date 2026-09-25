@@ -124,7 +124,17 @@ export async function GET() {
       );
     `);
 
-    // 8. Tabla de Recetas (Protegiendo columnas de macros con valores por defecto)
+    // 8. NUEVA: Tabla de Suscripciones Push para las Notificaciones Insistentes
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        subscription JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // 9. Tabla de Recetas (Protegiendo columnas de macros con valores por defecto)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS recipes (
         id SERIAL PRIMARY KEY,
@@ -165,7 +175,7 @@ export async function GET() {
       ('Wok Vegetal con Tofu', 'Comida Principal', '🥦', 15, 340, 22, 25, 14, '100g de tofu firme en cubos, mix de vegetales (zucchini, zanahoria, brotes de soja), jengibre, aceite de sésamo.', 'Saltear the tofu en cubos hasta que dore. Retirar, saltear los vegetales crujientes con jengibre rallado y reincorporar el tofu al final.')
     `);
 
-    // 9. Tablas de Gamificación e Insignias
+    // 10. Tablas de Gamificación e Insignias
     await pool.query(`
       CREATE TABLE IF NOT EXISTS badges (
         id SERIAL PRIMARY KEY,
@@ -229,7 +239,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos inicializada perfectamente con soporte multitrack, método de peso y zonas horarias!' 
+      message: '¡Base de datos inicializada perfectamente con soporte multitrack, método de peso, zonas horarias y notificaciones push!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
