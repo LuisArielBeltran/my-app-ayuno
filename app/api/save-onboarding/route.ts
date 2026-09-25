@@ -16,7 +16,8 @@ export async function POST(req: Request) {
       email, 
       firstMeal, 
       lastMeal, 
-      dietType 
+      dietType,
+      weightLossMethod // <--- Capturamos el método de descenso preferido
     } = await req.json();
 
     let userId = null;
@@ -60,10 +61,10 @@ export async function POST(req: Request) {
       trackType = 'maintenance';
     }
 
-    // 4. Guardamos o actualizamos las métricas avanzadas del usuario en Railway
+    // 4. Guardamos o actualizamos las métricas avanzadas del usuario en Railway (incluyendo weight_loss_method)
     await pool.query(
-      `INSERT INTO user_metrics (user_id, goal, gender, height_cm, weight_kg, target_weight_kg, diet_type, track_type, first_meal_time, last_meal_time, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      `INSERT INTO user_metrics (user_id, goal, gender, height_cm, weight_kg, target_weight_kg, diet_type, track_type, weight_loss_method, first_meal_time, last_meal_time, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
        ON CONFLICT (user_id) 
        DO UPDATE SET 
          goal = $2, 
@@ -73,8 +74,9 @@ export async function POST(req: Request) {
          target_weight_kg = $6, 
          diet_type = $7, 
          track_type = $8, 
-         first_meal_time = $9, 
-         last_meal_time = $10, 
+         weight_loss_method = $9,
+         first_meal_time = $10, 
+         last_meal_time = $11, 
          updated_at = NOW()`,
       [
         userId, 
@@ -85,6 +87,7 @@ export async function POST(req: Request) {
         targetWeight ? parseFloat(targetWeight.replace(',', '.')) : null, 
         dietType || 'omnivore', 
         trackType, 
+        weightLossMethod || 'fasting', 
         firstMeal || '09:00', 
         lastMeal || '22:00'
       ]
