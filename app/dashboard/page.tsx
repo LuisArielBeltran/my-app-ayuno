@@ -459,30 +459,68 @@ function DashboardContent() {
       <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
         <div>
           <h4 className="font-bold text-sm text-amber-900">🧪 Zona de Pruebas del Coach Inteligente</h4>
-          <p className="text-xs text-amber-700 mt-0.5">Envía una alerta push de prueba calculando tus vasos de agua según tu peso real.</p>
+          <p className="text-xs text-amber-700 mt-0.5">Activa tu dispositivo y prueba la alerta push calculada según tu peso real.</p>
         </div>
         <button
           onClick={async () => {
             try {
+              // 1. Solicitar permiso de notificaciones en el navegador
+              const permission = await Notification.requestPermission();
+              if (permission !== 'granted') {
+                alert('Debes permitir las notificaciones en la configuración de tu navegador.');
+                return;
+              }
+
+              const registration = await navigator.serviceWorker.ready;
+              const pubKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BHeJSLnfmTXJ4JnURRwb8iAlAwQcTZLiqcDATLlOugIx6SdV6G5jG3vOkvJ70owFsOHRh13F828o0BcWKMyeJvU';
+              
+              const padding = '='.repeat((4 - (pubKey.length % 4)) % 4);
+              const base64 = (pubKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+              const rawData = window.atob(base64);
+              const outputArray = new Uint8Array(rawData.length);
+              for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+              }
+
+              const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: outputArray
+              });
+
+              // 2. Guardar la suscripción en la base de datos asociada a tu correo
+              const subRes = await fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmail, subscription })
+              });
+              const subData = await subRes.json();
+              
+              if (!subData.success) {
+                alert('Error al guardar la suscripción: ' + subData.error);
+                return;
+              }
+
+              // 3. Disparar la alerta inteligente de prueba
               const res = await fetch('/api/push/smart-alert', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: userEmail, alertType: 'water' })
               });
               const data = await res.json();
+              
               if (data.success) {
                 alert(`¡Alerta enviada con éxito! Meta calculada: ${data.waterTargetGlasses} vasos de agua.`);
               } else {
-                alert('Aviso: ' + (data.error || 'Asegúrate de activar las notificaciones primero con el botón de arriba.'));
+                alert('Aviso: ' + (data.error || 'No se pudo enviar la alerta.'));
               }
             } catch (err) {
               console.error(err);
-              alert('Error de conexión al enviar la alerta de prueba.');
+              alert('Error de conexión al procesar la notificación.');
             }
           }}
           className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md whitespace-nowrap"
         >
-          Probar Alerta Push 💧
+          Activar y Probar Alerta Push 💧
         </button>
       </div>
 
