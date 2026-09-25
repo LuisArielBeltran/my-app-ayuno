@@ -1,27 +1,33 @@
-import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
+import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
 // Obtener el estado del ayuno al abrir la app
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const email = searchParams.get('email') || 'usuario@demo.com';
+export async function GET(request: NextRequest) {
+  const email = request.nextUrl.searchParams.get('email') || 'usuario@demo.com';
 
   try {
     const result = await pool.query(
       'SELECT is_fasting, start_time, target_hours FROM fasting_state WHERE email = $1',
       [email]
     );
-    return NextResponse.json({ state: result.rows[0] || null });
+    return NextResponse.json({ success: true, state: result.rows[0] || null });
   } catch (error: any) {
     console.error('Error al obtener estado de ayuno:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 // Guardar el estado cuando el usuario inicia o detiene el ayuno
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { email = 'usuario@demo.com', isFasting, startTime, targetHours } = await request.json();
+    const body = await request.json();
+    const email = body.email || 'usuario@demo.com';
+    
+    // Soportar ambas nomenclaturas (camelCase o snake_case) por seguridad
+    const isFasting = body.isFasting !== undefined ? body.isFasting : body.is_fasting;
+    const startTime = body.startTime !== undefined ? body.startTime : body.start_time;
+    const targetHours = body.targetHours !== undefined ? body.targetHours : body.target_hours;
 
     const check = await pool.query('SELECT id FROM fasting_state WHERE email = $1', [email]);
 
@@ -40,6 +46,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error al guardar estado de ayuno:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
