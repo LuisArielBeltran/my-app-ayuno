@@ -6,6 +6,7 @@ import RecipeGuide from '@/components/RecipeGuide';
 import FoodAnalyzer from '@/components/FoodAnalyzer';
 import BadgesSection from '@/components/BadgesSection';
 import PushNotificationBanner from '@/components/PushNotificationBanner';
+import AICoachChat from '@/components/AICoachChat'; // <--- Importamos el chat flotante del Coach IA
 
 function DashboardContent() {
   const router = useRouter();
@@ -54,12 +55,12 @@ function DashboardContent() {
       try {
         const fastingRes = await fetch(`/api/fasting/state?email=${encodeURIComponent(userEmail)}`);
         const fastingData = await fastingRes.json();
-        if (fastingData.success && fastingData.fasting.is_fasting && fastingData.fasting.start_time) {
+        if (fastingData.success && fastingData.state && fastingData.state.is_fasting && fastingData.state.start_time) {
           setIsFasting(true);
-          if (fastingData.fasting.target_hours) {
-            setTargetHours(fastingData.fasting.target_hours);
+          if (fastingData.state.target_hours) {
+            setTargetHours(fastingData.state.target_hours);
           }
-          const start = new Date(fastingData.fasting.start_time).getTime();
+          const start = new Date(fastingData.state.start_time).getTime();
           const now = new Date().getTime();
           const elapsedSeconds = Math.floor((now - start) / 1000);
           setFastingSeconds(elapsedSeconds > 0 ? elapsedSeconds : 0);
@@ -206,11 +207,17 @@ function DashboardContent() {
 
   const toggleFasting = async () => {
     const newFastingState = !isFasting;
+    const startTimeNow = newFastingState ? new Date().toISOString() : null;
     try {
       const res = await fetch('/api/fasting/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail, is_fasting: newFastingState, target_hours: targetHours })
+        body: JSON.stringify({ 
+          email: userEmail, 
+          is_fasting: newFastingState, 
+          start_time: startTimeNow,
+          target_hours: targetHours 
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -317,7 +324,7 @@ function DashboardContent() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8 space-y-6">
+    <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8 space-y-6 relative">
       
       {/* Banner para activar Notificaciones Push e Insistentes */}
       <PushNotificationBanner />
@@ -593,6 +600,9 @@ function DashboardContent() {
       <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl text-center">
         <p className="text-sm text-emerald-600 font-semibold">Programa Especialista Adaptativo Activo ✓</p>
       </div>
+
+      {/* Widget flotante del Coach IA */}
+      <AICoachChat email={userEmail} />
 
     </div>
   );
