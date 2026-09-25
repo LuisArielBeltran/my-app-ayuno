@@ -20,16 +20,25 @@ function DashboardContent() {
   const [waterGlasses, setWaterGlasses] = useState(3);
   const [fastingStreak, setFastingStreak] = useState(3);
 
-  // Estados de Perfil Profesional y Tracks
+  // Estados de Perfil Profesional, Tracks y Método de Descenso
   const [trackType, setTrackType] = useState('fat_loss');
   const [dietType, setDietType] = useState('omnivore');
+  const [weightLossMethod, setWeightLossMethod] = useState('fasting'); // 'fasting' o 'traditional'
+
+  // Estados para el Registro de Comidas del Método Tradicional o Volumen
+  const [mealsLogged, setMealsLogged] = useState({
+    breakfast: false,
+    lunch: false,
+    snack: false,
+    dinner: false
+  });
 
   // Estados para el Validador de Alimentos
   const [searchTerm, setSearchTerm] = useState('');
   const [foodResults, setFoodResults] = useState<any[]>([]);
   const [loadingFood, setLoadingFood] = useState(false);
 
-  // Estado del Coach Metabólico (En tiempo real)
+  // Estado del Coach Metabólico (En tiempo real y proactivo)
   const [currentTip, setCurrentTip] = useState<{phase: string, title: string, content: string} | null>(null);
 
   // Estados de Seguimiento de Peso y Metas
@@ -39,7 +48,7 @@ function DashboardContent() {
   const [submittingWeight, setSubmittingWeight] = useState(false);
   const [goalReached, setGoalReached] = useState(false);
 
-  // 1. Cargar el estado real del ayuno, peso y métricas profesionales desde la BD
+  // 1. Cargar el estado real desde la BD (Incluyendo track_type, diet_type y weight_loss_method)
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -63,12 +72,13 @@ function DashboardContent() {
           setTargetWeight(weightData.target_weight);
         }
 
-        // Cargar métricas avanzadas (Track y Dieta)
+        // Cargar métricas avanzadas profesionales
         const metricsRes = await fetch(`/api/metrics?email=${encodeURIComponent(userEmail)}`);
         const metricsData = await metricsRes.json();
         if (metricsData.success && metricsData.metrics) {
           if (metricsData.metrics.track_type) setTrackType(metricsData.metrics.track_type);
           if (metricsData.metrics.diet_type) setDietType(metricsData.metrics.diet_type);
+          if (metricsData.metrics.weight_loss_method) setWeightLossMethod(metricsData.metrics.weight_loss_method);
         }
       } catch (err) {
         console.error('Error al cargar datos iniciales:', err);
@@ -78,10 +88,10 @@ function DashboardContent() {
     fetchInitialData();
   }, [userEmail]);
 
-  // 2. Lógica del Cronómetro de Ayuno
+  // 2. Lógica del Cronómetro de Ayuno (Solo si aplica)
   useEffect(() => {
     let interval: any = null;
-    if (isFasting) {
+    if (isFasting && weightLossMethod === 'fasting' && trackType === 'fat_loss') {
       interval = setInterval(() => {
         setFastingSeconds((prev) => prev + 1);
       }, 1000);
@@ -89,29 +99,53 @@ function DashboardContent() {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isFasting]);
+  }, [isFasting, weightLossMethod, trackType]);
 
-  // 3. Cerebro del Coach Metabólico adaptado al Track activo (Pérdida vs Ganancia Muscular)
+  // 3. Cerebro del Coach Metabólico adaptado al Track y Metodología activa
   useEffect(() => {
+    if (trackType === 'muscle_gain') {
+      setCurrentTip({
+        phase: "Volumen Limpio",
+        title: "Optimización de Fibras Musculares",
+        content: "Tu enfoque actual es hipertrofia con dieta " + dietType + ". Asegúrate de cumplir tus 4 ingestas proteicas diarias y mantener alta la hidratación."
+      });
+      return;
+    }
+
+    if (trackType === 'maintenance') {
+      setCurrentTip({
+        phase: "Mantenimiento Activo",
+        title: "Estilo de Vida Saludable",
+        content: "Mantén el equilibrio en tus porciones y respeta tus horarios biológicos para un rendimiento óptimo."
+      });
+      return;
+    }
+
+    if (weightLossMethod === 'traditional') {
+      setCurrentTip({
+        phase: "Método Tradicional Activo",
+        title: "Control de Ingestas y Hábitos",
+        content: "Sin restricciones horarias de ayuno. Concéntrate en registrar tus comidas principales y mantén al coach alerta a tus colaciones."
+      });
+      return;
+    }
+
+    // Si es Ayuno Intermitente
     if (!isFasting) {
-      const trackName = trackType === 'muscle_gain' ? 'Ganancia Muscular (Volumen Limpio)' : 'Pérdida de Grasa y Definición';
       setCurrentTip({
         phase: "Preparación",
-        title: `Modo Activo: ${trackName}`,
-        content: `Tu plan está configurado en modalidad profesional con dieta ${dietType}. Elige tu ventana y presiona iniciar para comenzar el día.`
+        title: "Modo Ayuno Activo",
+        content: "Tu plan está configurado con dieta " + dietType + ". Elige tu ventana y presiona iniciar para comenzar el ciclo metabólico."
       });
       return;
     }
 
     const hours = fastingSeconds / 3600;
-    
     if (hours >= targetHours) {
       setCurrentTip({ 
         phase: "¡Meta Cumplida! 🎉", 
-        title: trackType === 'muscle_gain' ? "Ventana de Nutrición Muscular Lista" : "Zona de Cetosis y Autofagia Óptima", 
-        content: trackType === 'muscle_gain' 
-          ? "Has completado tu descanso digestivo. Es momento de nutrir tus fibras musculares con proteínas de alta calidad." 
-          : "¡Meta alcanzada! Máxima optimización metabólica y limpieza celular." 
+        title: "Zona de Cetosis y Autofagia Óptima", 
+        content: "¡Meta alcanzada! Máxima optimización metabólica y limpieza celular lista para romper." 
       });
       return;
     }
@@ -121,7 +155,7 @@ function DashboardContent() {
     } else {
       setCurrentTip({ phase: "Fase Activa", title: "Optimización Metabólica en Curso", content: "Mantén una hidratación constante y respeta tus ventanas biológicas." });
     }
-  }, [fastingSeconds, targetHours, isFasting, trackType, dietType]);
+  }, [fastingSeconds, targetHours, isFasting, trackType, dietType, weightLossMethod]);
 
   // 4. Búsqueda inteligente de alimentos
   useEffect(() => {
@@ -285,7 +319,7 @@ function DashboardContent() {
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8 space-y-6">
       
-      {/* Banner para activar Notificaciones Push */}
+      {/* Banner para activar Notificaciones Push e Insistentes */}
       <PushNotificationBanner />
 
       {/* Botón de acceso rápido a Estadísticas */}
@@ -301,7 +335,7 @@ function DashboardContent() {
       {isSuccess && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-center animate-fade-in">
           <span className="font-bold block text-lg mb-1">¡🎉 Plan Activado con Éxito!</span>
-          <p className="text-sm">Tu programa profesional personalizado está listo.</p>
+          <p className="text-sm">Tu programa profesional personalizado está listo con asistente proactivo.</p>
         </div>
       )}
 
@@ -312,7 +346,7 @@ function DashboardContent() {
           <div>
             <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block">Track Activo</span>
             <span className="text-sm font-black text-indigo-950">
-              {trackType === 'muscle_gain' ? '💪 Ganancia Muscular (Volumen Limpio)' : trackType === 'maintenance' ? '🛡️ Estilo de Vida y Mantenimiento' : '🔥 Pérdida de Grasa y Definición'}
+              {trackType === 'muscle_gain' ? '💪 Ganancia Muscular (Volumen Limpio)' : trackType === 'maintenance' ? '🛡️ Estilo de Vida y Mantenimiento' : weightLossMethod === 'traditional' ? '🥗 Pérdida de Grasa (Método Tradicional)' : '🔥 Pérdida de Grasa (Ayuno Intermitente)'}
             </span>
           </div>
         </div>
@@ -323,7 +357,7 @@ function DashboardContent() {
 
       <div className="text-center">
         <h1 className="text-3xl font-black text-gray-900">Panel Principal & Coach</h1>
-        <p className="text-gray-500 mt-1">Monitorea tus avances metabólicos y resuelve tus dudas al instante.</p>
+        <p className="text-gray-500 mt-1">Monitorea tus avances metabólicos y mantén el control absoluto de tus hábitos.</p>
       </div>
 
       {currentTip && (
@@ -331,7 +365,7 @@ function DashboardContent() {
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">💡</span>
             <span className={`text-xs font-bold uppercase tracking-wider ${currentTip.phase.includes('Meta Cumplida') ? 'text-emerald-800' : 'text-amber-800'}`}>
-              Coach Metabólico • {currentTip.phase}
+              Coach Proactivo • {currentTip.phase}
             </span>
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-1">{currentTip.title}</h3>
@@ -339,66 +373,103 @@ function DashboardContent() {
         </div>
       )}
 
+      {/* RENDERIZADO CONDICIONAL DE LA TARJETA PRINCIPAL SEGÚN EL TRACK Y MÉTODO */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Tarjeta de Cronómetro Interactiva */}
-        <div className={`border p-6 rounded-2xl flex flex-col justify-between transition-all ${isFasting ? 'bg-indigo-900 text-white border-indigo-900 shadow-lg' : 'bg-indigo-50 border-indigo-100 text-gray-900'}`}>
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <span className={`text-xs font-bold uppercase tracking-wider ${isFasting ? 'text-indigo-300' : 'text-indigo-600'}`}>
-                {isFasting ? '🔥 Ayuno en Curso' : 'Control activo'}
-              </span>
-              <span className="text-xs bg-indigo-500/20 text-indigo-700 px-2 py-0.5 rounded-full font-bold">
-                ⚡ Racha: {fastingStreak} días
-              </span>
+        {/* OPCIÓN A: Si es Ayuno Intermitente */}
+        {trackType === 'fat_loss' && weightLossMethod === 'fasting' ? (
+          <div className={`border p-6 rounded-2xl flex flex-col justify-between transition-all ${isFasting ? 'bg-indigo-900 text-white border-indigo-900 shadow-lg' : 'bg-indigo-50 border-indigo-100 text-gray-900'}`}>
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className={`text-xs font-bold uppercase tracking-wider ${isFasting ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                  {isFasting ? '🔥 Ayuno en Curso' : 'Control activo'}
+                </span>
+                <span className="text-xs bg-indigo-500/20 text-indigo-700 px-2 py-0.5 rounded-full font-bold">
+                  ⚡ Racha: {fastingStreak} días
+                </span>
+              </div>
+              <h3 className="text-xl font-bold mb-2">Cronómetro de Ayuno</h3>
+              
+              {isFasting ? (
+                <div className="my-4 text-center">
+                  <span className="text-4xl font-black font-mono tracking-wider">{formatFastingTime(fastingSeconds)}</span>
+                  <p className="text-xs text-indigo-200 mt-1">Meta actual: {targetHours} horas</p>
+                  {fastingSeconds >= targetHours * 3600 && (
+                    <p className="text-xs text-emerald-400 font-bold mt-2 animate-pulse">¡Meta completada!</p>
+                  )}
+                </div>
+              ) : (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-3">Lleva el control estricto de tus ventanas de ayuno y alimentación.</p>
+                  <label className="block text-xs font-bold text-indigo-700 uppercase mb-1">Elige tu plan de hoy:</label>
+                  <select 
+                    value={targetHours}
+                    onChange={(e) => setTargetHours(Number(e.target.value))}
+                    className="w-full p-3 border border-indigo-200 rounded-xl text-sm focus:border-indigo-600 outline-none bg-white text-gray-800 shadow-sm font-medium"
+                  >
+                    <option value={12}>12/12 - Descanso Digestivo (12h)</option>
+                    <option value={14}>14/10 - Intermedio (14h)</option>
+                    <option value={16}>16/8 - Clásico / Definición (16h)</option>
+                    <option value={18}>18/6 - Avanzado (18h)</option>
+                    <option value={20}>20/4 - Dieta Guerrero (20h)</option>
+                    <option value={24}>24h - Desintoxicación (OMAD)</option>
+                  </select>
+                </div>
+              )}
             </div>
-            <h3 className="text-xl font-bold mb-2">Cronómetro de Ayuno</h3>
-            
-            {isFasting ? (
-              <div className="my-4 text-center">
-                <span className="text-4xl font-black font-mono tracking-wider">{formatFastingTime(fastingSeconds)}</span>
-                <p className="text-xs text-indigo-200 mt-1">Meta actual: {targetHours} horas</p>
-                {fastingSeconds >= targetHours * 3600 && (
-                  <p className="text-xs text-emerald-400 font-bold mt-2 animate-pulse">¡Meta completada!</p>
-                )}
-              </div>
-            ) : (
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-3">Lleva el control estricto de tus ventanas de ayuno y alimentación.</p>
-                <label className="block text-xs font-bold text-indigo-700 uppercase mb-1">Elige tu plan de hoy:</label>
-                <select 
-                  value={targetHours}
-                  onChange={(e) => setTargetHours(Number(e.target.value))}
-                  className="w-full p-3 border border-indigo-200 rounded-xl text-sm focus:border-indigo-600 outline-none bg-white text-gray-800 shadow-sm font-medium"
-                >
-                  <option value={12}>12/12 - Descanso Digestivo (12h)</option>
-                  <option value={14}>14/10 - Intermedio (14h)</option>
-                  <option value={16}>16/8 - Clásico / Definición (16h)</option>
-                  <option value={18}>18/6 - Avanzado (18h)</option>
-                  <option value={20}>20/4 - Dieta Guerrero (20h)</option>
-                  <option value={24}>24h - Desintoxicación (OMAD)</option>
-                </select>
-              </div>
-            )}
+
+            <button 
+              onClick={toggleFasting}
+              className={`w-full font-bold py-3 px-4 rounded-xl transition-all text-center shadow-md ${isFasting ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white mt-2'}`}
+            >
+              {isFasting ? 'Romper Ayuno / Finalizar' : 'Iniciar Ayuno'}
+            </button>
           </div>
+        ) : (
+          /* OPCIÓN B: Método Tradicional, Ganancia Muscular o Mantenimiento (Sin Cronómetro de Ayuno) */
+          <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">
+                {trackType === 'muscle_gain' ? '💪 Control de Ingestas y Volumen' : '🥗 Control Diario de Comidas'}
+              </span>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Registro de Ingestas Hoy</h3>
+              <p className="text-xs text-gray-600 mb-3">Marca tus comidas principales para asegurar que cumples con tus requerimientos diarios.</p>
+              
+              <div className="space-y-2 mb-4">
+                {[
+                  { key: 'breakfast', label: '🍳 Desayuno / Primera Comida' },
+                  { key: 'lunch', label: '🥗 Almuerzo Principal' },
+                  { key: 'snack', label: '🥜 Colación / Refuerzo Proteico' },
+                  { key: 'dinner', label: '🍲 Cena Reparadora' }
+                ].map((meal) => (
+                  <label key={meal.key} className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-indigo-100 cursor-pointer hover:bg-indigo-50 transition-all">
+                    <span className="text-xs font-bold text-gray-700">{meal.label}</span>
+                    <input 
+                      type="checkbox"
+                      checked={(mealsLogged as any)[meal.key]}
+                      onChange={(e) => setMealsLogged({ ...mealsLogged, [meal.key]: e.target.checked })}
+                      className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="bg-white/80 p-2.5 rounded-xl border border-indigo-200 text-center text-xs font-bold text-indigo-900">
+              {Object.values(mealsLogged).filter(Boolean).length} de 4 comidas registradas hoy
+            </div>
+          </div>
+        )}
 
-          <button 
-            onClick={toggleFasting}
-            className={`w-full font-bold py-3 px-4 rounded-xl transition-all text-center shadow-md ${isFasting ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white mt-2'}`}
-          >
-            {isFasting ? 'Romper Ayuno / Finalizar' : 'Iniciar Ayuno'}
-          </button>
-        </div>
-
-        {/* Tarjeta de Hidratación */}
+        {/* Tarjeta de Hidratación Proactiva */}
         <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl flex flex-col justify-between">
           <div>
-            <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">Hidratación</span>
+            <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">Hidratación Constante</span>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Registro de Agua</h3>
             <div className="my-3 flex items-center justify-between bg-white/80 p-3 rounded-xl border border-blue-100">
               <span className="text-sm font-semibold text-gray-600">Vasos hoy:</span>
               <span className="text-2xl font-black text-blue-600">{waterGlasses} <span className="text-xs font-normal text-gray-400">/ 8 vasos</span></span>
             </div>
+            <p className="text-[11px] text-blue-700 italic">💡 El coach te recordará beber agua periódicamente para evitar la fatiga.</p>
           </div>
           <button 
             onClick={addWaterGlass}
@@ -472,7 +543,7 @@ function DashboardContent() {
       {/* Validador de Alimentos */}
       <div className="bg-gray-50 border border-gray-200 p-6 rounded-2xl">
         <h3 className="text-xl font-bold text-gray-900 mb-1">🔍 Validador de Alimentos</h3>
-        <p className="text-sm text-gray-500 mb-4">Escribe cualquier producto (ej: tofu, tempeh, mate, café con leche) para saber si rompe tu ayuno o se adapta a tu dieta.</p>
+        <p className="text-sm text-gray-500 mb-4">Escribe cualquier producto (ej: tofu, tempeh, mate, café con leche) para analizar su compatibilidad con tu dieta.</p>
         
         <input 
           type="text"
@@ -498,7 +569,7 @@ function DashboardContent() {
                   <div>
                     {item.breaks_fast ? (
                       <span className="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
-                        ❌ Rompe el ayuno
+                        ❌ Rompe ayuno
                       </span>
                     ) : (
                       <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
@@ -516,11 +587,11 @@ function DashboardContent() {
       {/* Módulo de IA por Fotografía */}
       <FoodAnalyzer />
 
-      {/* Guía de Recetas Rotativas (Apta para veganos, vegetarianos u omnívoros) */}
+      {/* Guía de Recetas Rotativas */}
       <RecipeGuide />
 
       <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl text-center">
-        <p className="text-sm text-emerald-600 font-semibold">Programa Especialista Activo ✓</p>
+        <p className="text-sm text-emerald-600 font-semibold">Programa Especialista Adaptativo Activo ✓</p>
       </div>
 
     </div>
