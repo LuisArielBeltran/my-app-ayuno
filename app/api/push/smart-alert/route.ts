@@ -3,14 +3,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
 import pool from '@/lib/db';
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || 'mailto:soporte@tudominio.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
-  process.env.VAPID_PRIVATE_KEY || ''
-);
-
 export async function POST(req: NextRequest) {
   try {
+    // Configuramos VAPID de forma segura dentro de la función para evitar errores en el Build de Vercel
+    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const privateKey = process.env.VAPID_PRIVATE_KEY;
+
+    if (!publicKey || !privateKey) {
+      return NextResponse.json({ success: false, error: 'Faltan las claves VAPID en las variables de entorno' }, { status: 500 });
+    }
+
+    webpush.setVapidDetails(
+      process.env.VAPID_SUBJECT || 'mailto:soporte@tudominio.com',
+      publicKey,
+      privateKey
+    );
+
     const { email, alertType } = await req.json();
 
     if (!email) {
@@ -23,10 +31,9 @@ export async function POST(req: NextRequest) {
       [email]
     );
 
-    let waterTargetGlasses = 8; // Valor por defecto
+    let waterTargetGlasses = 8;
     if (metricsRes.rows.length > 0) {
       const userWeight = Number(metricsRes.rows[0].weight_kg) || 70;
-      // Cálculo personalizado: 35ml por kg convertido a vasos de 250ml
       const totalMlNeeded = userWeight * 35;
       waterTargetGlasses = Math.round(totalMlNeeded / 250);
     }
@@ -38,7 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'El usuario no tiene notificaciones push activas' }, { status: 404 });
     }
 
-    // 3. Definir mensajes personalizados según el tipo de alerta o presencia virtual
+    // 3. Definir mensajes personalizados
     let title = '¡TIENES EL CONTROL! ⚡';
     let body = 'Tu coach está aquí para recordarte que vas excelente.';
 
@@ -55,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     const payload = JSON.stringify({ title, body, icon: '/icon.png' });
 
-    // 4. Disparar las notificaciones a los dispositivos del usuario
+    // 4. Disparar notificaciones
     const sendPromises = subRes.rows.map(async (row) => {
       try {
         await webpush.sendNotification(row.subscription, payload);
