@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-export default function FastingTimer() {
+export default function FastingTimer({ email }: { email: string }) {
   const [protocolHours, setProtocolHours] = useState(16); // 16 por defecto
   const [timeLeft, setTimeLeft] = useState(16 * 3600);
   const [isActive, setIsActive] = useState(false);
@@ -10,8 +10,7 @@ export default function FastingTimer() {
   // 1. Recuperar el estado de ayuno y la meta guardada
   useEffect(() => {
     const fetchFasting = async () => {
-      const email = localStorage.getItem('user_email');
-      if (!email) return;
+      if (!email) return; // Validación basada en el prop
 
       try {
         const res = await fetch(`/api/fasting?email=${encodeURIComponent(email)}`);
@@ -42,7 +41,7 @@ export default function FastingTimer() {
       }
     };
     fetchFasting();
-  }, []);
+  }, [email]);
 
   // 2. Motor del cronómetro
   useEffect(() => {
@@ -68,7 +67,7 @@ export default function FastingTimer() {
   const toggleTimer = async () => {
     const newState = !isActive;
     const newStartTime = newState ? new Date().toISOString() : null;
-    const email = localStorage.getItem('user_email') || 'usuario@demo.com';
+    const safeEmail = email || 'usuario@demo.com';
     
     setIsActive(newState);
     setStartTime(newStartTime);
@@ -82,7 +81,7 @@ export default function FastingTimer() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email,
+          email: safeEmail,
           isFasting: newState,
           startTime: newStartTime,
           targetHours: protocolHours
