@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react'; // Importación clave de NextAuth
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,17 +14,19 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+      // Utilizamos NextAuth para manejar la autenticación segura
+      const res = await signIn('credentials', {
+        redirect: false, // Evitamos que NextAuth recargue la página automáticamente
+        email,
+        password,
       });
-      const data = await res.json();
 
-      if (data.success) {
+      if (res?.error) {
+        alert('Error: Credenciales incorrectas. Verifica tu correo y contraseña.');
+      } else if (res?.ok) {
+        // Si el login es exitoso, NextAuth ya creó la cookie de sesión.
+        // Ahora sí redirigimos al dashboard.
         router.push(`/dashboard?email=${encodeURIComponent(email)}`);
-      } else {
-        alert('Error: ' + data.error);
       }
     } catch (err: any) {
       alert('Error de conexión: ' + err.message);
@@ -68,9 +71,9 @@ export default function LoginPage() {
           <button 
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md disabled:opacity-50"
           >
-            {loading ? 'Iniciando sesión...' : 'Entrar al Panel'}
+            {loading ? 'Validando credenciales...' : 'Entrar al Panel'}
           </button>
         </form>
 
