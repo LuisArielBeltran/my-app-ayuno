@@ -1,17 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-export default function UserDashboard() {
+export default function UserDashboard({ email }: { email: string }) {
   const [waterHistory, setWaterHistory] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !email) return;
 
     const fetchStats = async () => {
-      const email = localStorage.getItem('user_email');
-      if (!email) return;
-
       try {
         const res = await fetch(`/api/stats?email=${encodeURIComponent(email)}`);
         const data = await res.json();
@@ -23,7 +20,7 @@ export default function UserDashboard() {
       }
     };
     fetchStats();
-  }, [isOpen]);
+  }, [isOpen, email]);
 
   return (
     <div className="w-full max-w-sm mx-auto mb-6">
