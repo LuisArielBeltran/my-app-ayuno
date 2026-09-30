@@ -1,9 +1,6 @@
 'use client';
-export const dynamic = 'force-dynamic'; // Evita que Next.js cachee la página estáticamente
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Suspense } from 'react';
 import RecipeGuide from '@/components/RecipeGuide';
 import FoodAnalyzer from '@/components/FoodAnalyzer';
 import BadgesSection from '@/components/BadgesSection';
@@ -41,25 +38,26 @@ function AICoachChat({ email }: { email: string }) {
     setLoading(true);
 
     try {
-      setTimeout(() => {
-        let assistantReply = "¡Entiendo perfecto! Recuerda mantener tu hidratación alta y seguir tu plan de objetivos. ¿Te gustaría que revisemos alguna de las recetas recomendadas para este momento?";
-        
-        const lower = userText.toLowerCase();
-        if (lower.includes('hambre') || lower.includes('ansiedad') || lower.includes('comer')) {
-          assistantReply = "Es completamente normal sentir un poco de ansiedad al principio. Prueba tomando un vaso grande de agua con unas gotas de limón o un té verde sin azúcar. ¡Tú tienes el control, no la comida! 💧";
-        } else if (lower.includes('agua') || lower.includes('cuanto')) {
-          assistantReply = "Te recomiendo apuntar a tus vasos diarios calculados según tu peso. Si estás en movimiento o entrenando, ¡necesitas un poco más para mantener el metabolismo al 100%!";
-        } else if (lower.includes('romper') || lower.includes('ayuno')) {
-          assistantReply = "Si vas a romper tu ayuno, hazlo con proteínas limpias o grasas saludables (como huevos, palta o un caldo de huesos) para evitar picos de insulina bruscos.";
-        }
+      // Conexión real con el endpoint de IA
+      const res = await fetch('/api/ai/analyze-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: userText, email })
+      });
 
-        setMessages((prev) => [...prev, { role: 'assistant', text: assistantReply }]);
-        setLoading(false);
-      }, 1000);
+      const data = await res.json();
+      const assistantReply = data.text || data.reply || "¡Aquí estoy para ayudarte!";
+      
+      setMessages((prev) => [...prev, { role: 'assistant', text: assistantReply }]);
+      setLoading(false);
 
     } catch (err) {
       console.error(err);
-      setMessages((prev) => [...prev, { role: 'assistant', text: 'Ups, tuve un pequeño problema de conexión, pero estoy aquí contigo. Inténtalo de nuevo en un segundito.' }]);
+      // Fallback local SÓLO si la API falla por error de red
+      setMessages((prev) => [...prev, { 
+        role: 'assistant', 
+        text: 'Ups, tuve un pequeño problema de conexión, pero recuerda mantener tu hidratación alta. ¡Inténtalo de nuevo en un segundito!' 
+      }]);
       setLoading(false);
     }
   };
