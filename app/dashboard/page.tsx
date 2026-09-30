@@ -158,12 +158,16 @@ function DashboardContent() {
   const [fastingSeconds, setFastingSeconds] = useState(0);
   const [targetHours, setTargetHours] = useState<number>(16);
   const [waterGlasses, setWaterGlasses] = useState(3);
-  const [waterTarget, setWaterTarget] = useState<number>(8); // Meta dinámica de agua basada en el peso
+  const [waterTarget, setWaterTarget] = useState<number>(8);
   const [fastingStreak, setFastingStreak] = useState(3);
 
+  // Estados de personalización según el objetivo del usuario
+  const [userGoal, setUserGoal] = useState('Bajar peso y mantenerme');
   const [trackType, setTrackType] = useState('fat_loss');
   const [dietType, setDietType] = useState('omnivore');
   const [weightLossMethod, setWeightLossMethod] = useState('fasting');
+  const [hasActivity, setHasActivity] = useState(false);
+  const [activityType, setActivityType] = useState('');
 
   const [mealsLogged, setMealsLogged] = useState({
     breakfast: false,
@@ -206,7 +210,6 @@ function DashboardContent() {
           setWeightHistory(weightData.weights);
           setTargetWeight(weightData.target_weight);
 
-          // Calcular la meta de agua dinámicamente según el peso actual
           if (weightData.weights && weightData.weights.length > 0) {
             const currentW = Number(weightData.weights[weightData.weights.length - 1].weight_kg) || 70;
             const calculatedGlasses = Math.round((currentW * 35) / 250);
@@ -217,9 +220,13 @@ function DashboardContent() {
         const metricsRes = await fetch(`/api/metrics?email=${encodeURIComponent(userEmail)}`);
         const metricsData = await metricsRes.json();
         if (metricsData.success && metricsData.metrics) {
-          if (metricsData.metrics.track_type) setTrackType(metricsData.metrics.track_type);
-          if (metricsData.metrics.diet_type) setDietType(metricsData.metrics.diet_type);
-          if (metricsData.metrics.weight_loss_method) setWeightLossMethod(metricsData.metrics.weight_loss_method);
+          const m = metricsData.metrics;
+          if (m.goal) setUserGoal(m.goal);
+          if (m.track_type) setTrackType(m.track_type);
+          if (m.diet_type) setDietType(m.diet_type);
+          if (m.weight_loss_method) setWeightLossMethod(m.weight_loss_method);
+          if (m.has_activity !== undefined) setHasActivity(m.has_activity);
+          if (m.activity_type) setActivityType(m.activity_type);
         }
       } catch (err) {
         console.error('Error al cargar datos iniciales:', err);
@@ -242,20 +249,29 @@ function DashboardContent() {
   }, [isFasting, weightLossMethod, trackType]);
 
   useEffect(() => {
-    if (trackType === 'muscle_gain') {
+    if (userGoal.includes('masa muscular')) {
       setCurrentTip({
         phase: "Volumen Limpio",
         title: "Optimización de Fibras Musculares",
-        content: "Tu enfoque actual es hipertrofia con dieta " + dietType + ". Asegúrate de cumplir tus 4 ingestas proteicas diarias y mantener alta la hidratación."
+        content: `Tu enfoque actual es hipertrofia con dieta ${dietType}${hasActivity ? ` y entrenamiento de ${activityType}` : ''}. Asegúrate de cumplir tus ingestas proteicas diarias.`
       });
       return;
     }
 
-    if (trackType === 'maintenance') {
+    if (userGoal.includes('envejecimiento')) {
       setCurrentTip({
-        phase: "Mantenimiento Activo",
-        title: "Estilo de Vida Saludable",
-        content: "Mantén el equilibrio en tus porciones y respeta tus horarios biológicos para un rendimiento óptimo."
+        phase: "Longevidad y Regeneración",
+        title: "Activación Anti-Aging",
+        content: "El ayuno intermitente y la restricción limpia estimulan la reparación de tejidos y la salud mitocondrial."
+      });
+      return;
+    }
+
+    if (userGoal.includes('Desintoxicación')) {
+      setCurrentTip({
+        phase: "Detox Celular y Autofagia",
+        title: "Limpieza Metabólica Profunda",
+        content: "Mantén una hidratación alta con infusiones permitidas para potenciar la eliminación de toxinas."
       });
       return;
     }
@@ -264,7 +280,7 @@ function DashboardContent() {
       setCurrentTip({
         phase: "Método Tradicional Activo",
         title: "Control de Ingestas y Hábitos",
-        content: "Sin restricciones horarias de ayuno. Concéntrate en registrar tus comidas principales y mantén al coach alerta a tus colaciones."
+        content: "Concéntrate en registrar tus comidas principales y mantén al coach alerta a tus porciones."
       });
       return;
     }
@@ -273,7 +289,7 @@ function DashboardContent() {
       setCurrentTip({
         phase: "Preparación",
         title: "Modo Ayuno Activo",
-        content: "Tu plan está configurado con dieta " + dietType + ". Elige tu ventana y presiona iniciar para comenzar el ciclo metabólico."
+        content: `Tu plan está configurado con dieta ${dietType}. Elige tu ventana y presiona iniciar para comenzar el ciclo metabólico.`
       });
       return;
     }
@@ -293,7 +309,7 @@ function DashboardContent() {
     } else {
       setCurrentTip({ phase: "Fase Activa", title: "Optimización Metabólica en Curso", content: "Mantén una hidratación constante y respeta tus ventanas biológicas." });
     }
-  }, [fastingSeconds, targetHours, isFasting, trackType, dietType, weightLossMethod]);
+  }, [fastingSeconds, targetHours, isFasting, userGoal, dietType, weightLossMethod, hasActivity, activityType]);
 
   useEffect(() => {
     const delayDebounce = setTimeout(async () => {
@@ -323,7 +339,6 @@ function DashboardContent() {
       const initialWeight = Number(weightHistory[0].weight_kg);
       const currentW = Number(weightHistory[weightHistory.length - 1].weight_kg);
 
-      // Actualizar meta de agua si el peso cambia
       const calculatedGlasses = Math.round((currentW * 35) / 250);
       setWaterTarget(calculatedGlasses);
 
@@ -462,6 +477,17 @@ function DashboardContent() {
     );
   };
 
+  // Renderizado dinámico del título según la meta elegida en el Onboarding (Punto 5)
+  const getGoalBadgeInfo = () => {
+    if (userGoal.includes('masa muscular')) return { label: '💪 Ganancia Muscular (Volumen Limpio)', color: 'bg-amber-50 text-amber-900 border-amber-200' };
+    if (userGoal.includes('envejecimiento')) return { label: '🧬 Retrasar el Envejecimiento (Anti-Aging)', color: 'bg-purple-50 text-purple-900 border-purple-200' };
+    if (userGoal.includes('Desintoxicación')) return { label: '🌿 Desintoxicación Celular (Autofagia)', color: 'bg-emerald-50 text-emerald-900 border-emerald-200' };
+    if (weightLossMethod === 'traditional') return { label: '🥗 Pérdida de Grasa (Método Tradicional)', color: 'bg-indigo-50 text-indigo-900 border-indigo-200' };
+    return { label: '🔥 Pérdida de Grasa (Ayuno Intermitente)', color: 'bg-indigo-50 text-indigo-900 border-indigo-200' };
+  };
+
+  const goalInfo = getGoalBadgeInfo();
+
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-6 md:p-8 space-y-6 relative">
       
@@ -483,18 +509,24 @@ function DashboardContent() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between bg-indigo-50 border border-indigo-100 p-4 rounded-2xl gap-2">
+      {/* Banner de Objetivo Personalizado */}
+      <div className={`flex flex-wrap items-center justify-between border p-4 rounded-2xl gap-2 ${goalInfo.color}`}>
         <div className="flex items-center gap-2">
-          <span className="text-xl">⚡</span>
+          <span className="text-xl">🎯</span>
           <div>
-            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block">Track Activo</span>
-            <span className="text-sm font-black text-indigo-950">
-              {trackType === 'muscle_gain' ? '💪 Ganancia Muscular (Volumen Limpio)' : trackType === 'maintenance' ? '🛡️ Estilo de Vida y Mantenimiento' : weightLossMethod === 'traditional' ? '🥗 Pérdida de Grasa (Método Tradicional)' : '🔥 Pérdida de Grasa (Ayuno Intermitente)'}
-            </span>
+            <span className="text-[10px] font-bold uppercase tracking-widest block opacity-75">Tu Meta Seleccionada</span>
+            <span className="text-sm font-black">{goalInfo.label}</span>
           </div>
         </div>
-        <div className="bg-white px-3 py-1.5 rounded-xl border border-indigo-200 text-xs font-bold text-indigo-900 capitalize">
-          🥗 Dieta: {dietType === 'vegan' ? 'Vegana' : dietType === 'vegetarian' ? 'Vegetariana' : 'Omnívora'}
+        <div className="flex items-center gap-2">
+          {hasActivity && (
+            <span className="bg-white/80 px-3 py-1.5 rounded-xl border text-xs font-bold text-gray-800">
+              🏃‍♂️ {activityType}
+            </span>
+          )}
+          <span className="bg-white px-3 py-1.5 rounded-xl border text-xs font-bold capitalize">
+            🥗 Dieta: {dietType}
+          </span>
         </div>
       </div>
 
@@ -569,7 +601,7 @@ function DashboardContent() {
           <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col justify-between">
             <div>
               <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-1">
-                {trackType === 'muscle_gain' ? '💪 Control de Ingestas y Volumen' : '🥗 Control Diario de Comidas'}
+                {userGoal.includes('masa muscular') ? '💪 Control de Ingestas y Volumen' : '🥗 Control Diario de Comidas'}
               </span>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Registro de Ingestas Hoy</h3>
               <p className="text-xs text-gray-600 mb-3">Marca tus comidas principales para asegurar que cumples con tus requerimientos diarios.</p>
