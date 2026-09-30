@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-export default function CommunityCircles() {
+export default function CommunityCircles({ email }: { email: string }) {
   const [posts, setPosts] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,13 +24,14 @@ export default function CommunityCircles() {
     if (!newMessage.trim()) return;
     setIsSubmitting(true);
     
-    const email = localStorage.getItem('user_email') || 'Anónimo';
+    // Usamos el prop email inyectado por el Dashboard
+    const safeEmail = email || 'Anónimo';
     
     try {
       await fetch('/api/community', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, protocol: '16/8', message: newMessage }),
+        body: JSON.stringify({ email: safeEmail, protocol: '16/8', message: newMessage }),
       });
       setNewMessage('');
       fetchPosts(); // Recargar los mensajes
@@ -41,9 +42,9 @@ export default function CommunityCircles() {
     }
   };
 
-  const formatUsername = (email: string) => {
-    if (email === 'Anónimo') return 'Usuario Anónimo';
-    return email.split('@')[0];
+  const formatUsername = (userEmail: string) => {
+    if (userEmail === 'Anónimo') return 'Usuario Anónimo';
+    return userEmail.split('@')[0];
   };
 
   return (
