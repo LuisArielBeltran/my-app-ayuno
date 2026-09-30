@@ -1,4 +1,6 @@
 'use client';
+export const dynamic = 'force-dynamic'; // Evita que Next.js cachee la página estáticamente
+
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
@@ -152,7 +154,20 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isSuccess = searchParams.get('success');
-  const userEmail = searchParams.get('email') || 'usuario@ayuno.com';
+
+  // Obtención inteligente del email (URL -> LocalStorage -> Fallback)
+  const [userEmail, setUserEmail] = useState<string>('usuario@ayuno.com');
+
+  useEffect(() => {
+    const paramEmail = searchParams.get('email');
+    const localEmail = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null;
+    if (paramEmail) {
+      setUserEmail(paramEmail);
+      localStorage.setItem('user_email', paramEmail);
+    } else if (localEmail) {
+      setUserEmail(localEmail);
+    }
+  }, [searchParams]);
 
   const [isFasting, setIsFasting] = useState(false);
   const [fastingSeconds, setFastingSeconds] = useState(0);
@@ -189,9 +204,11 @@ function DashboardContent() {
   const [goalReached, setGoalReached] = useState(false);
 
   useEffect(() => {
+    if (!userEmail || userEmail === 'usuario@ayuno.com') return;
+
     const fetchInitialData = async () => {
       try {
-        const fastingRes = await fetch(`/api/fasting/state?email=${encodeURIComponent(userEmail)}`);
+        const fastingRes = await fetch(`/api/fasting/state?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
         const fastingData = await fastingRes.json();
         if (fastingData.success && fastingData.state && fastingData.state.is_fasting && fastingData.state.start_time) {
           setIsFasting(true);
@@ -204,7 +221,7 @@ function DashboardContent() {
           setFastingSeconds(elapsedSeconds > 0 ? elapsedSeconds : 0);
         }
 
-        const weightRes = await fetch(`/api/weight?email=${encodeURIComponent(userEmail)}`);
+        const weightRes = await fetch(`/api/weight?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
         const weightData = await weightRes.json();
         if (weightData.success) {
           setWeightHistory(weightData.weights);
@@ -217,7 +234,7 @@ function DashboardContent() {
           }
         }
 
-        const metricsRes = await fetch(`/api/metrics?email=${encodeURIComponent(userEmail)}`);
+        const metricsRes = await fetch(`/api/metrics?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
         const metricsData = await metricsRes.json();
         if (metricsData.success && metricsData.metrics) {
           const m = metricsData.metrics;
@@ -477,7 +494,6 @@ function DashboardContent() {
     );
   };
 
-  // Renderizado dinámico del título según la meta elegida en el Onboarding (Punto 5)
   const getGoalBadgeInfo = () => {
     if (userGoal.includes('masa muscular')) return { label: '💪 Ganancia Muscular (Volumen Limpio)', color: 'bg-amber-50 text-amber-900 border-amber-200' };
     if (userGoal.includes('envejecimiento')) return { label: '🧬 Retrasar el Envejecimiento (Anti-Aging)', color: 'bg-purple-50 text-purple-900 border-purple-200' };
