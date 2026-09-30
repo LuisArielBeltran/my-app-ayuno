@@ -1,6 +1,6 @@
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
-  disable: process.env.NODE_ENV === "development", // Se desactiva en desarrollo local para no causar conflictos
+  disable: true, // Lo desactivamos temporalmente en producción para forzar que el navegador lea siempre el código nuevo de Vercel
   register: true,
   workboxOptions: {
     disableDevLogs: true,
@@ -11,5 +11,3 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 const nextConfig = {};
 
 module.exports = withPWA(nextConfig);
-
-
