@@ -7,14 +7,18 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  // Memoria temporal del cuestionario
+  // Memoria temporal del cuestionario extendida
   const [formData, setFormData] = useState({
     goal: '',
-    weightLossMethod: 'fasting', // 'fasting' o 'traditional'
+    weightLossMethod: 'fasting',
     gender: '',
     height: '',
     weight: '',
     targetWeight: '',
+    hasActivity: null as boolean | null,
+    activityType: '',
+    activityOther: '',
+    activityHours: '',
     water: '',
     firstMeal: '09:00',
     lastMeal: '22:00',
@@ -22,14 +26,12 @@ export default function OnboardingPage() {
     email: ''
   });
 
-  // Determinar si el usuario eligió bajar de peso
+  // Lógica de cálculo de pasos
   const isWeightLoss = formData.goal === 'Bajar peso y mantenerme';
-  
-  // Total de pasos dinámico: 9 si elige bajar de peso (por el selector de método), 8 para los demás
-  const totalSteps = isWeightLoss ? 9 : 8;
+  const totalSteps = isWeightLoss ? 10 : 9; // Sumamos 1 paso general para la actividad física
   const progress = (step / totalSteps) * 100;
 
-  // Mapeo limpio de pantallas según el paso actual y el objetivo
+  // Mapeo limpio de pantallas
   const getScreenType = () => {
     if (step === 1) return 'goal';
     if (isWeightLoss) {
@@ -37,18 +39,20 @@ export default function OnboardingPage() {
       if (step === 3) return 'gender';
       if (step === 4) return 'measurements';
       if (step === 5) return 'targetWeight';
-      if (step === 6) return 'schedule';
-      if (step === 7) return 'diet';
-      if (step === 8) return 'water';
-      if (step === 9) return 'summary';
+      if (step === 6) return 'activity';
+      if (step === 7) return 'schedule';
+      if (step === 8) return 'diet';
+      if (step === 9) return 'water';
+      if (step === 10) return 'summary';
     } else {
       if (step === 2) return 'gender';
       if (step === 3) return 'measurements';
       if (step === 4) return 'targetWeight';
-      if (step === 5) return 'schedule';
-      if (step === 6) return 'diet';
-      if (step === 7) return 'water';
-      if (step === 8) return 'summary';
+      if (step === 5) return 'activity';
+      if (step === 6) return 'schedule';
+      if (step === 7) return 'diet';
+      if (step === 8) return 'water';
+      if (step === 9) return 'summary';
     }
     return 'goal';
   };
@@ -61,7 +65,7 @@ export default function OnboardingPage() {
   };
 
   const nextStep = () => {
-    // Validaciones específicas según la pantalla actual
+    // Validaciones
     if (currentScreen === 'measurements') {
       const h = parseFloat(formData.height.replace(',', '.'));
       const w = parseFloat(formData.weight.replace(',', '.'));
@@ -112,7 +116,7 @@ export default function OnboardingPage() {
       
       if (data.success) {
         setTimeout(() => {
-          router.push(`/checkout?email=${encodeURIComponent(formData.email)}`);
+          router.push(`/onboarding/results?email=${encodeURIComponent(formData.email)}`);
         }, 3000);
       } else {
         alert('Error al guardar los datos: ' + data.error);
@@ -134,6 +138,9 @@ export default function OnboardingPage() {
       </div>
     );
   }
+
+  // Estilo unificado para botones de selección simple
+  const optionButtonClass = "w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 shadow-sm transition-all font-bold text-gray-700";
 
   return (
     <div className="min-h-screen bg-white md:bg-gray-50">
@@ -159,6 +166,7 @@ export default function OnboardingPage() {
           {/* 1. OBJETIVO PRINCIPAL */}
           {currentScreen === 'goal' && (
             <div className="animate-fade-in-up">
+              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Paso Inicial</span>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Para empezar, cuéntanos qué quieres lograr:</h2>
               <div className="space-y-3">
                 {[
@@ -167,11 +175,7 @@ export default function OnboardingPage() {
                   'Retrasar el envejecimiento', 
                   'Desintoxicación celular'
                 ].map((opcion) => (
-                  <button 
-                    key={opcion} 
-                    onClick={() => handleSelect('goal', opcion)} 
-                    className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 transition-all font-medium text-gray-700"
-                  >
+                  <button key={opcion} onClick={() => handleSelect('goal', opcion)} className={optionButtonClass}>
                     {opcion}
                   </button>
                 ))}
@@ -179,26 +183,20 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* 2. MÉTODO DE DESCENSO (Solo si elige bajar de peso) */}
+          {/* 2. MÉTODO DE DESCENSO */}
           {currentScreen === 'weightLossMethod' && (
             <div className="animate-fade-in-up">
-              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Personalización de Descenso</span>
+              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Personalización</span>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cómo prefieres lograr tu descenso de peso?</h2>
               <p className="text-gray-500 mb-6 text-sm">Adaptaremos la experiencia de tu panel principal a tu comodidad.</p>
               <div className="space-y-3">
-                <button 
-                  onClick={() => handleSelect('weightLossMethod', 'fasting')}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${formData.weightLossMethod === 'fasting' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-100 hover:border-indigo-400'}`}
-                >
-                  <span className="font-bold text-gray-900 block">⏱️ Ayuno Intermitente</span>
-                  <span className="text-xs text-gray-500">Control estricto de ventanas horarias y cronómetro metabólico.</span>
+                <button onClick={() => handleSelect('weightLossMethod', 'fasting')} className={`${optionButtonClass} ${formData.weightLossMethod === 'fasting' ? 'border-indigo-600 bg-indigo-50' : ''}`}>
+                  <span className="block mb-1">⏱️ Ayuno Intermitente</span>
+                  <span className="text-xs font-medium text-gray-500">Control estricto de ventanas horarias y cronómetro.</span>
                 </button>
-                <button 
-                  onClick={() => handleSelect('weightLossMethod', 'traditional')}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${formData.weightLossMethod === 'traditional' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-100 hover:border-indigo-400'}`}
-                >
-                  <span className="font-bold text-gray-900 block">🥗 Método Tradicional / Equilibrado</span>
-                  <span className="text-xs text-gray-500">Comidas fraccionadas a lo largo del día sin restricciones horarias de ayuno.</span>
+                <button onClick={() => handleSelect('weightLossMethod', 'traditional')} className={`${optionButtonClass} ${formData.weightLossMethod === 'traditional' ? 'border-indigo-600 bg-indigo-50' : ''}`}>
+                  <span className="block mb-1">🥗 Método Tradicional / Equilibrado</span>
+                  <span className="text-xs font-medium text-gray-500">Comidas fraccionadas sin restricciones de ayuno.</span>
                 </button>
               </div>
             </div>
@@ -207,16 +205,17 @@ export default function OnboardingPage() {
           {/* 3. GÉNERO */}
           {currentScreen === 'gender' && (
             <div className="animate-fade-in-up">
+              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Biometría</span>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cuál es tu género biológico?</h2>
-              <p className="text-gray-500 mb-6 text-sm">Esta información nos sirve para calcular tu metabolismo basal con precisión médica.</p>
+              <p className="text-gray-500 mb-6 text-sm">Sirve para calcular tu metabolismo basal con precisión.</p>
               <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => handleSelect('gender', 'Hombre')} className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 transition-all">
+                <button onClick={() => handleSelect('gender', 'Hombre')} className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 shadow-sm transition-all">
                   <span className="text-5xl mb-3">👨</span>
-                  <span className="font-medium text-gray-700">Hombre</span>
+                  <span className="font-bold text-gray-700">Hombre</span>
                 </button>
-                <button onClick={() => handleSelect('gender', 'Mujer')} className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 transition-all">
+                <button onClick={() => handleSelect('gender', 'Mujer')} className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 shadow-sm transition-all">
                   <span className="text-5xl mb-3">👩</span>
-                  <span className="font-medium text-gray-700">Mujer</span>
+                  <span className="font-bold text-gray-700">Mujer</span>
                 </button>
               </div>
             </div>
@@ -225,32 +224,19 @@ export default function OnboardingPage() {
           {/* 4. MEDIDAS ACTUALES */}
           {currentScreen === 'measurements' && (
             <div className="animate-fade-in-up">
+              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Perfil Corporal</span>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Tus medidas actuales</h2>
-              <p className="text-gray-500 mb-6 text-sm">Usaremos estos datos para determinar el ritmo al que te conviene avanzar.</p>
+              <p className="text-gray-500 mb-6 text-sm">Usaremos estos datos para determinar tu ritmo de avance.</p>
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Altura (cm)</label>
-                  <input 
-                    type="text" 
-                    inputMode="decimal"
-                    placeholder="Ej. 175" 
-                    value={formData.height} 
-                    onChange={(e) => setFormData({...formData, height: e.target.value})} 
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none transition-all" 
-                  />
+                  <input type="text" inputMode="decimal" placeholder="Ej. 175" value={formData.height} onChange={(e) => setFormData({...formData, height: e.target.value})} className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none shadow-sm transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Peso actual (kg)</label>
-                  <input 
-                    type="text" 
-                    inputMode="decimal"
-                    placeholder="Ej. 85,5 o 85.5" 
-                    value={formData.weight} 
-                    onChange={(e) => setFormData({...formData, weight: e.target.value})} 
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none transition-all" 
-                  />
+                  <input type="text" inputMode="decimal" placeholder="Ej. 85,5 o 85.5" value={formData.weight} onChange={(e) => setFormData({...formData, weight: e.target.value})} className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none shadow-sm transition-all" />
                 </div>
-                <button onClick={nextStep} disabled={!formData.height || !formData.weight} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all">
+                <button onClick={nextStep} disabled={!formData.height || !formData.weight} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-md">
                   Continuar
                 </button>
               </div>
@@ -260,91 +246,145 @@ export default function OnboardingPage() {
           {/* 5. PESO OBJETIVO */}
           {currentScreen === 'targetWeight' && (
             <div className="animate-fade-in-up">
+              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Tu Meta</span>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cuál es tu peso objetivo?</h2>
-              <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-6">
-                <p className="text-sm text-green-800 font-medium">💡 Ya sea para definir o ganar masa muscular limpia, fijar tu meta es el primer paso.</p>
+              <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-6 shadow-sm">
+                <p className="text-sm text-emerald-800 font-medium">💡 Ya sea para definir o ganar masa limpia, fijar tu meta es vital.</p>
               </div>
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Peso meta (kg)</label>
-                  <input 
-                    type="text" 
-                    inputMode="decimal"
-                    placeholder="Ej. 75,0 o 75.0" 
-                    value={formData.targetWeight} 
-                    onChange={(e) => setFormData({...formData, targetWeight: e.target.value})} 
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none transition-all" 
-                  />
+                  <input type="text" inputMode="decimal" placeholder="Ej. 75,0 o 75.0" value={formData.targetWeight} onChange={(e) => setFormData({...formData, targetWeight: e.target.value})} className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none shadow-sm transition-all" />
                 </div>
-                <button onClick={nextStep} disabled={!formData.targetWeight} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all">
-                  Siguiente
+                <button onClick={nextStep} disabled={!formData.targetWeight} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-md">
+                  Continuar
                 </button>
               </div>
             </div>
           )}
 
-          {/* 6. HORARIOS BIOLÓGICOS */}
+          {/* 6. ACTIVIDAD FÍSICA (Nueva Pantalla) */}
+          {currentScreen === 'activity' && (
+            <div className="animate-fade-in-up">
+              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Estilo de Vida</span>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Realizas actividad física?</h2>
+              <p className="text-gray-500 mb-6 text-sm">Esto ajustará tus necesidades calóricas e hídricas que la IA procesará.</p>
+
+              {/* Pregunta Inicial */}
+              {formData.hasActivity === null && (
+                <div className="space-y-3">
+                  <button onClick={() => setFormData({...formData, hasActivity: true})} className={optionButtonClass}>
+                    🏃‍♂️ Sí, realizo ejercicio
+                  </button>
+                  <button onClick={() => { setFormData({...formData, hasActivity: false}); setTimeout(() => nextStep(), 300); }} className={optionButtonClass}>
+                    🛋️ No, soy sedentario/a
+                  </button>
+                </div>
+              )}
+
+              {/* Si respondió SÍ, mostramos el detalle */}
+              {formData.hasActivity === true && (
+                <div className="space-y-6 animate-fade-in">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">¿Qué actividad principal realizas?</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {['Gimnasio', 'Spinning', 'Aeróbico', 'Running', 'Tenis', 'Fútbol', 'Caminar', 'Otras'].map((act) => (
+                        <button
+                          key={act}
+                          onClick={() => setFormData({...formData, activityType: act})}
+                          className={`p-3 rounded-xl border-2 text-sm font-bold transition-all shadow-sm ${formData.activityType === act ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-100 text-gray-600 hover:border-indigo-300'}`}
+                        >
+                          {act}
+                        </button>
+                      ))}
+                    </div>
+                    {formData.activityType === 'Otras' && (
+                      <input
+                        type="text"
+                        placeholder="Especifica cuál..."
+                        value={formData.activityOther}
+                        onChange={(e) => setFormData({...formData, activityOther: e.target.value})}
+                        className="mt-3 w-full p-4 border-2 border-gray-200 rounded-xl text-sm focus:border-indigo-600 outline-none shadow-sm transition-all"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">¿Cuántas horas a la semana?</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {['1 hora', '2 horas', '3+ horas'].map((hrs) => (
+                        <button
+                          key={hrs}
+                          onClick={() => setFormData({...formData, activityHours: hrs})}
+                          className={`p-3 rounded-xl border-2 text-sm font-bold transition-all shadow-sm ${formData.activityHours === hrs ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-100 text-gray-600 hover:border-indigo-300'}`}
+                        >
+                          {hrs}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={nextStep}
+                    disabled={!formData.activityType || (formData.activityType === 'Otras' && !formData.activityOther) || !formData.activityHours}
+                    className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-md"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 7. HORARIOS BIOLÓGICOS */}
           {currentScreen === 'schedule' && (
             <div className="animate-fade-in-up space-y-6">
               <div className="text-center">
                 <span className="text-4xl mb-2 block">⏰</span>
                 <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Tus horarios de alimentación</h2>
-                <p className="text-gray-500 text-sm">Alineamos tus ventanas nutricionales con tus hábitos diarios.</p>
+                <p className="text-gray-500 text-sm">Alineamos tus ventanas nutricionales con tus hábitos.</p>
               </div>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">¿A qué hora es tu primera comida?</label>
-                  <input 
-                    type="time" 
-                    value={formData.firstMeal}
-                    onChange={(e) => setFormData({...formData, firstMeal: e.target.value})}
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl font-bold text-indigo-600 bg-gray-50 outline-none"
-                  />
+                  <input type="time" value={formData.firstMeal} onChange={(e) => setFormData({...formData, firstMeal: e.target.value})} className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl font-bold text-indigo-600 bg-white shadow-sm outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">¿A qué hora es tu última comida?</label>
-                  <input 
-                    type="time" 
-                    value={formData.lastMeal}
-                    onChange={(e) => setFormData({...formData, lastMeal: e.target.value})}
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl font-bold text-indigo-600 bg-gray-50 outline-none"
-                  />
+                  <input type="time" value={formData.lastMeal} onChange={(e) => setFormData({...formData, lastMeal: e.target.value})} className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl font-bold text-indigo-600 bg-white shadow-sm outline-none" />
                 </div>
-                <button onClick={nextStep} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 transition-all">
-                  Siguiente
+                <button onClick={nextStep} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 transition-all shadow-md">
+                  Continuar
                 </button>
               </div>
             </div>
           )}
 
-          {/* 7. TIPO DE DIETA */}
+          {/* 8. TIPO DE DIETA */}
           {currentScreen === 'diet' && (
             <div className="animate-fade-in-up">
+              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Nutrición</span>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cómo prefieres alimentarte?</h2>
-              <p className="text-gray-500 mb-6 text-sm">Adaptaremos el recetario y las proteínas según tu elección.</p>
+              <p className="text-gray-500 mb-6 text-sm">Adaptaremos el recetario según tu elección.</p>
               <div className="space-y-3">
                 {[
-                  { id: 'omnivore', title: '🥩 Omnívora (Incluye carnes y vegetales)', desc: 'Acceso a todo el recetario tradicional y proteico.' },
-                  { id: 'vegetarian', title: '🧀 Vegetariana (Sin carnes, con lácteos/huevos)', desc: 'Proteínas limpias de alta calidad y vegetales.' },
-                  { id: 'vegan', title: '🌱 Vegana (100% basado en plantas)', desc: 'Tofu, legumbres, semillas y alternativas vegetales.' }
+                  { id: 'omnivore', title: '🥩 Omnívora', desc: 'Acceso a todo el recetario tradicional y proteico.' },
+                  { id: 'vegetarian', title: '🧀 Vegetariana', desc: 'Sin carnes, con lácteos y huevos.' },
+                  { id: 'vegan', title: '🌱 Vegana', desc: '100% basado en plantas, tofu y semillas.' }
                 ].map((item) => (
-                  <button 
-                    key={item.id} 
-                    onClick={() => handleSelect('dietType', item.id)} 
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${formData.dietType === item.id ? 'border-indigo-600 bg-indigo-50' : 'border-gray-100 hover:border-indigo-400'}`}
-                  >
-                    <span className="font-bold text-gray-800 block">{item.title}</span>
-                    <span className="text-xs text-gray-500">{item.desc}</span>
+                  <button key={item.id} onClick={() => handleSelect('dietType', item.id)} className={`${optionButtonClass} flex flex-col ${formData.dietType === item.id ? 'border-indigo-600 bg-indigo-50' : ''}`}>
+                    <span className="font-bold text-gray-800 mb-1">{item.title}</span>
+                    <span className="text-xs font-medium text-gray-500">{item.desc}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* 8. HÁBITOS DE AGUA */}
+          {/* 9. HÁBITOS DE AGUA */}
           {currentScreen === 'water' && (
             <div className="animate-fade-in-up">
-              <div className="w-full h-24 bg-gray-100 rounded-xl mb-4 flex items-center justify-center text-3xl">💧</div>
+              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Hidratación</span>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">¿Cuánta agua bebes al día?</h2>
               <div className="space-y-3">
                 {[
@@ -353,58 +393,44 @@ export default function OnboardingPage() {
                   { text: 'Entre 2 y 6 vasos', icon: '💧' },
                   { text: 'Más de 6 vasos', icon: '🌊' }
                 ].map((opcion) => (
-                  <button key={opcion.text} onClick={() => handleSelect('water', opcion.text)} className="w-full flex items-center p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 transition-all">
+                  <button key={opcion.text} onClick={() => handleSelect('water', opcion.text)} className={`${optionButtonClass} flex items-center`}>
                     <span className="text-2xl mr-4">{opcion.icon}</span>
-                    <span className="font-medium text-gray-700">{opcion.text}</span>
+                    <span>{opcion.text}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* 9. RESUMEN Y CORREO (FINAL) */}
+          {/* 10. RESUMEN Y CORREO */}
           {currentScreen === 'summary' && (
             <div className="animate-fade-in-up space-y-5">
               <div className="text-center">
                 <span className="text-4xl mb-2 block">🎯</span>
-                <h2 className="text-2xl font-extrabold text-gray-900">Tu plan personal ha sido generado</h2>
-                <p className="text-gray-500 text-xs mt-1">Hemos diseñado un sistema experto para tu meta y estilo.</p>
+                <h2 className="text-2xl font-extrabold text-gray-900">Tu plan personal está listo</h2>
+                <p className="text-gray-500 text-xs mt-1">Hemos diseñado un sistema experto para tu meta.</p>
               </div>
 
-              <div className="bg-indigo-50/60 border border-indigo-100 p-4 rounded-xl space-y-2 text-xs text-gray-700">
+              <div className="bg-indigo-50/60 border border-indigo-100 p-4 rounded-xl shadow-sm space-y-2 text-xs text-gray-700">
                 <div className="flex justify-between font-bold text-indigo-900 border-b border-indigo-100 pb-2">
                   <span>Peso Actual ➔ Meta</span>
                   <span>{formData.weight || '85'} kg ➔ {formData.targetWeight || '75'} kg</span>
                 </div>
                 <div className="flex items-center gap-2 pt-1"><span>🟢</span> Objetivo: <b>{formData.goal || 'Tu objetivo'}</b></div>
+                <div className="flex items-center gap-2"><span>🏃‍♂️</span> Actividad: <b>{formData.hasActivity ? `${formData.activityType} (${formData.activityHours})` : 'Sedentario/a'}</b></div>
                 {formData.goal === 'Bajar peso y mantenerme' && (
                   <div className="flex items-center gap-2"><span>⚡</span> Método: <b className="capitalize">{formData.weightLossMethod === 'fasting' ? 'Ayuno Intermitente' : 'Método Tradicional'}</b></div>
                 )}
                 <div className="flex items-center gap-2"><span>🥗</span> Dieta adaptada: <b className="capitalize">{formData.dietType}</b></div>
-                <div className="flex items-center gap-2"><span>📸</span> Asistencia 24/7 de Nutricionista IA por foto y Coach Proactivo</div>
-              </div>
-
-              <div className="bg-indigo-50/60 border border-indigo-100 p-4 rounded-xl text-center space-y-1.5">
-                <p className="text-xs font-bold text-indigo-950 uppercase tracking-wide">
-                  ¡Vamos a ayudarte a <span className="text-indigo-600">{formData.goal || "alcanzar tu meta"}</span>!
-                </p>
-                <p className="text-[11px] text-gray-600 leading-relaxed">
-                  Nuestro coach insistente y proactivo estará recordándote tus tomas de agua y colaciones para que nunca te sientas solo en el proceso.
-                </p>
+                <div className="flex items-center gap-2"><span>🤖</span> Asistencia 24/7 de Nutricionista IA y Coach Proactivo</div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Correo electrónico para enviar tu plan</label>
-                <input 
-                  type="email" 
-                  placeholder="tucorreo@gmail.com" 
-                  value={formData.email} 
-                  onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                  className="w-full p-4 border-2 border-gray-200 rounded-xl text-base focus:border-indigo-600 outline-none transition-all" 
-                />
+                <label className="block text-sm font-bold text-gray-700 mb-1">Correo electrónico para enviarte el plan</label>
+                <input type="email" placeholder="tucorreo@gmail.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full p-4 border-2 border-gray-200 rounded-xl text-base focus:border-indigo-600 outline-none shadow-sm transition-all" />
               </div>
 
-              <button onClick={startAnalysis} disabled={!formData.email || !formData.email.includes('@')} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-sm uppercase tracking-wider py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg text-center">
+              <button onClick={startAnalysis} disabled={!formData.email || !formData.email.includes('@')} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-sm uppercase tracking-wider py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg">
                 ¡VAMOS POR TU OBJETIVO! 🚀
               </button>
             </div>
