@@ -1,8 +1,9 @@
 'use client';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
-export default function Navbar() {
+function NavbarContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
 
@@ -34,5 +35,13 @@ export default function Navbar() {
         )}
       </div>
     </nav>
+  );
+}
+
+export default function Navbar() {
+  return (
+    <Suspense fallback={<div className="h-16 bg-white border-b border-gray-100 py-4 px-6 max-w-4xl mx-auto rounded-2xl my-4 shadow-sm animate-pulse"></div>}>
+      <NavbarContent />
+    </Suspense>
   );
 }
