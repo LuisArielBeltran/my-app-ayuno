@@ -1,9 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { requestNotificationPermission, sendLocalNotification } from '@/lib/notifications';
 import { useSearchParams } from 'next/navigation';
 
-export default function PushNotificationBanner() {
+function PushNotificationBannerContent() {
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [supported, setSupported] = useState(true);
   const searchParams = useSearchParams();
@@ -80,5 +80,13 @@ export default function PushNotificationBanner() {
         Activar
       </button>
     </div>
+  );
+}
+
+export default function PushNotificationBanner() {
+  return (
+    <Suspense fallback={<div className="h-[72px] bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-md animate-pulse"></div>}>
+      <PushNotificationBannerContent />
+    </Suspense>
   );
 }
