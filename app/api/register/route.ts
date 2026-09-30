@@ -1,42 +1,26 @@
 export const dynamic = 'force-dynamic';
-import { NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
+import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 });
+    const { email, subscription } = await req.json();
+
+    if (!email || !subscription) {
+      return NextResponse.json({ success: false, error: 'Email y suscripción requeridos' }, { status: 400 });
     }
 
-    // 1. Encriptar la contraseña
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Guardar o actualizar la suscripción del usuario en la base de datos de forma segura[cite: 20]
+    await pool.query(`
+      INSERT INTO push_subscriptions (email, subscription)
+      VALUES ($1, $2)
+      ON CONFLICT (email) 
+      DO UPDATE SET subscription = EXCLUDED.subscription;
+    `, [email, JSON.stringify(subscription)]);
 
-    // 2. Verificar si el usuario ya existe en la base de datos
-    const userCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    
-    if (userCheck.rows.length > 0) {
-      const user = userCheck.rows[0];
-      
-      // Si el usuario existe pero NO tiene contraseña (viene del Onboarding)
-      if (!user.password || user.password.trim() === '') {
-        await pool.query('UPDATE users SET password = $1 WHERE email = $2', [hashedPassword, email]);
-        return NextResponse.json({ success: true, message: 'Contraseña asignada exitosamente' });
-      } else {
-        // Si ya tiene contraseña, entonces sí es un usuario que intenta registrarse dos veces
-        return NextResponse.json({ error: 'El usuario ya está registrado. Por favor, inicia sesión.' }, { status: 400 });
-      }
-    } else {
-      // 3. Si no existe en absoluto, lo creamos desde cero
-      await pool.query(
-        'INSERT INTO users (email, password) VALUES ($1, $2)',
-        [email, hashedPassword]
-      );
-      return NextResponse.json({ success: true, message: 'Usuario creado exitosamente' });
-    }
+    return NextResponse.json({ success: true, message: 'Suscripción push guardada con éxito' });
   } catch (error: any) {
-    console.error('Error en registro:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error en /api/push/subscribe:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
