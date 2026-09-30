@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-export default function MoodTracker() {
+export default function MoodTracker({ email }: { email: string }) {
   const [moodScore, setMoodScore] = useState<number | null>(null);
   const [energyLevel, setEnergyLevel] = useState<number>(5);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
@@ -18,8 +18,7 @@ export default function MoodTracker() {
 
   useEffect(() => {
     const fetchMood = async () => {
-      const email = localStorage.getItem('user_email');
-      if (!email) return;
+      if (!email) return; // Validación basada en el prop
 
       try {
         const res = await fetch(`/api/mood?email=${encodeURIComponent(email)}`);
@@ -35,7 +34,7 @@ export default function MoodTracker() {
       }
     };
     fetchMood();
-  }, []);
+  }, [email]);
 
   const toggleSymptom = (symptom: string) => {
     setSelectedSymptoms(prev => 
@@ -45,8 +44,7 @@ export default function MoodTracker() {
   };
 
   const handleSave = async () => {
-    const email = localStorage.getItem('user_email');
-    if (!email || !moodScore) return;
+    if (!email || !moodScore) return; // Validación rigurosa
 
     try {
       await fetch('/api/mood', {
