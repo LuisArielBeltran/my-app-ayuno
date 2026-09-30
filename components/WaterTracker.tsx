@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-export default function WaterTracker() {
+export default function WaterTracker({ email }: { email: string }) {
   const [glasses, setGlasses] = useState(0);
   const dailyGoal = 8;
   const glassVolume = 250;
@@ -9,8 +9,7 @@ export default function WaterTracker() {
   // 1. Cargar el registro desde la nube al abrir la app
   useEffect(() => {
     const fetchWater = async () => {
-      const email = localStorage.getItem('user_email');
-      if (!email) return; // Si no hay usuario, no busca
+      if (!email) return;
 
       try {
         const res = await fetch(`/api/water?email=${encodeURIComponent(email)}`);
@@ -23,7 +22,7 @@ export default function WaterTracker() {
       }
     };
     fetchWater();
-  }, []);
+  }, [email]);
 
   // 2. Guardar en PostgreSQL al sumar un vaso
   const handleAddGlass = async () => {
@@ -31,13 +30,13 @@ export default function WaterTracker() {
       const newCount = glasses + 1;
       setGlasses(newCount); // Actualiza la pantalla instantáneamente
 
-      const email = localStorage.getItem('user_email') || 'usuario@demo.com';
+      const safeEmail = email || 'usuario@demo.com';
 
       try {
         await fetch('/api/water', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, glasses: newCount }), 
+          body: JSON.stringify({ email: safeEmail, glasses: newCount }), 
         });
       } catch (error) {
         console.error("Error al guardar en la nube", error);
