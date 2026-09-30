@@ -10,15 +10,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Falta el correo electrónico' }, { status: 400 });
     }
 
-    // Buscar el usuario y sus métricas avanzadas (incluyendo weight_loss_method)
+    // Buscar el usuario en la base de datos[cite: 26]
     const userRes = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     if (userRes.rows.length === 0) {
       return NextResponse.json({ success: true, metrics: null });
     }
 
     const userId = userRes.rows[0].id;
+
+    // Consultar todas las métricas incluyendo los datos de actividad física y gimnasio
     const metricsRes = await pool.query(
-      'SELECT goal, gender, height_cm, weight_kg, target_weight_kg, diet_type, track_type, weight_loss_method, first_meal_time, last_meal_time FROM user_metrics WHERE user_id = $1',
+      `SELECT goal, gender, height_cm, weight_kg, target_weight_kg, 
+              diet_type, track_type, weight_loss_method, 
+              first_meal_time, last_meal_time, 
+              has_activity, activity_type, activity_hours 
+       FROM user_metrics WHERE user_id = $1`,
       [userId]
     );
 
