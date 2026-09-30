@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Suspense } from 'react';
+import { signIn } from 'next-auth/react'; // Importación clave para el auto-login
 
 function RegisterForm() {
   const router = useRouter();
@@ -26,20 +26,34 @@ function RegisterForm() {
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     try {
-      const res = await fetch('/api/auth/register', {
+      // 1. Creamos el usuario (o le asignamos la contraseña si viene del onboarding)
+      const res = await fetch('/api/register', { // Ruta ajustada según arquitectura
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
           password,
-          timezone: userTimezone // <--- Enviamos el timezone al backend
+          timezone: userTimezone
         })
       });
       const data = await res.json();
 
       if (data.success) {
-        // Redirigir al dashboard con su email y el aviso de éxito
-        router.push(`/dashboard?email=${encodeURIComponent(email)}&success=true`);
+        // 2. AUTO-LOGIN: Generamos la sesión segura de NextAuth silenciosamente
+        const signInRes = await signIn('credentials', {
+          redirect: false,
+          email,
+          password
+        });
+
+        if (signInRes?.error) {
+          // Si por alguna razón falla el login automático, lo enviamos al login manual
+          alert('Cuenta creada con éxito, pero debes iniciar sesión.');
+          router.push('/login');
+        } else {
+          // 3. Redirigimos al dashboard con la sesión ya activa
+          router.push(`/dashboard?email=${encodeURIComponent(email)}&success=true`);
+        }
       } else {
         alert('Error en el registro: ' + data.error);
       }
@@ -87,9 +101,9 @@ function RegisterForm() {
           <button 
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all shadow-md"
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all shadow-md disabled:opacity-50"
           >
-            {loading ? 'Creando cuenta...' : 'Activar mi Plan y Entrar 🚀'}
+            {loading ? 'Configurando seguridad...' : 'Activar mi Plan y Entrar 🚀'}
           </button>
         </form>
 
