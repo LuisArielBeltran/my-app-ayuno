@@ -20,7 +20,7 @@ export async function GET() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone TEXT DEFAULT 'UTC';
     `);
 
-    // 2. Tabla de Métricas del Usuario (Ampliada con perfiles de dieta, tracks, método de peso y horarios)
+    // 2. Tabla de Métricas del Usuario (Ampliada con perfiles de dieta, tracks, método de peso, horarios y actividad)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_metrics (
         id SERIAL PRIMARY KEY,
@@ -36,6 +36,9 @@ export async function GET() {
         first_meal_time VARCHAR(20) DEFAULT '09:00',
         last_meal_time VARCHAR(20) DEFAULT '22:00',
         speed_level VARCHAR(50) DEFAULT 'normal',
+        has_activity BOOLEAN,
+        activity_type VARCHAR(100),
+        activity_hours VARCHAR(50),
         updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
@@ -48,6 +51,9 @@ export async function GET() {
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS first_meal_time VARCHAR(20) DEFAULT '09:00';
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS last_meal_time VARCHAR(20) DEFAULT '22:00';
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS speed_level VARCHAR(50) DEFAULT 'normal';
+      ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS has_activity BOOLEAN;
+      ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS activity_type VARCHAR(100);
+      ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS activity_hours VARCHAR(50);
     `);
 
     // 3. Tabla de Base de Alimentos
@@ -239,7 +245,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos inicializada perfectamente con soporte multitrack, método de peso, zonas horarias y notificaciones push!' 
+      message: '¡Base de datos inicializada perfectamente con soporte multitrack, método de peso, zonas horarias, actividad física y notificaciones push!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
