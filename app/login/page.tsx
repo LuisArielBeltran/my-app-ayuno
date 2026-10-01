@@ -1,9 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react'; // Importación clave de NextAuth
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -82,5 +82,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 text-gray-500">Cargando inicio de sesión...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
