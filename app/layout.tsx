@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import SessionProviderWrapper from '@/components/SessionProviderWrapper';
+import WSCleanup from '@/components/WSCleanup'; // <--- Importamos el limpiador de caché
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -33,6 +34,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
+        {/* Limpia automáticamente el Service Worker viejo y la caché retenida */}
+        <WSCleanup />
+
         <SessionProviderWrapper>
           {children}
         </SessionProviderWrapper>
@@ -40,5 +44,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-
