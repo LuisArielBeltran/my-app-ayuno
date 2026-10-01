@@ -1,19 +1,22 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function ResultsPage() {
+function ResultsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlEmail = searchParams.get('email') || '';
+
   const [selectedPlan, setSelectedPlan] = useState('4'); // 4 Semanas seleccionado por defecto
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(urlEmail);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Recupera el correo del usuario si ya lo ingresó en los pasos anteriores
+  // Recupera el correo del usuario si ya lo ingresó en los pasos anteriores o lo lee de la URL
   useEffect(() => {
     const savedEmail = localStorage.getItem('user_email');
-    if (savedEmail) setEmail(savedEmail);
-  }, []);
+    if (savedEmail && !email) setEmail(savedEmail);
+  }, [email]);
 
   const handleCheckoutAndRegister = async () => {
     if (!email || !password) {
@@ -160,5 +163,13 @@ export default function ResultsPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Cargando tu plan personalizado...</div>}>
+      <ResultsContent />
+    </Suspense>
   );
 }
