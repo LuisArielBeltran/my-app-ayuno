@@ -38,7 +38,6 @@ function AICoachChat({ email }: { email: string }) {
     setLoading(true);
 
     try {
-      // Conexión real con el endpoint de IA
       const res = await fetch('/api/ai/analyze-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,7 +52,6 @@ function AICoachChat({ email }: { email: string }) {
 
     } catch (err) {
       console.error(err);
-      // Fallback local SÓLO si la API falla por error de red
       setMessages((prev) => [...prev, { 
         role: 'assistant', 
         text: 'Ups, tuve un pequeño problema de conexión, pero recuerda mantener tu hidratación alta. ¡Inténtalo de nuevo en un segundito!' 
@@ -153,7 +151,6 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const isSuccess = searchParams.get('success');
 
-  // Obtención inteligente del email (URL -> LocalStorage -> Fallback)
   const [userEmail, setUserEmail] = useState<string>('usuario@ayuno.com');
 
   useEffect(() => {
@@ -174,7 +171,6 @@ function DashboardContent() {
   const [waterTarget, setWaterTarget] = useState<number>(8);
   const [fastingStreak, setFastingStreak] = useState(3);
 
-  // Estados de personalización según el objetivo del usuario
   const [userGoal, setUserGoal] = useState('Bajar peso y mantenerme');
   const [trackType, setTrackType] = useState('fat_loss');
   const [dietType, setDietType] = useState('omnivore');
