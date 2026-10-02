@@ -1,25 +1,27 @@
+export const dynamic = 'force-dynamic';
+
 import Link from 'next/link';
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col justify-between py-10 px-4">
       <div className="max-w-5xl mx-auto w-full space-y-10 my-auto text-center">
-        
+
         {/* Encabezados Principales */}
         <div className="space-y-6">
           <span className="bg-indigo-600 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-sm">
             TIENES EL CONTROL
           </span>
-          
+
           <h1 className="text-5xl md:text-6xl font-black text-gray-900 tracking-tight leading-tight">
             Tu Coach Personal <br />
             <span className="text-indigo-600 text-3xl md:text-5xl mt-3 block">te ayuda a obtener los resultados que necesitas.</span>
           </h1>
-          
+
           <p className="text-xl md:text-2xl font-bold text-gray-800 pt-2">
             Domina el Ayuno Intermitente entre otros con Ciencia y Bienestar
           </p>
-          
+
           <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Controla tus ventanas de ayuno, realiza seguimiento de tu evolución de peso, hidrátate correctamente y resuelve tus dudas al instante con nuestro ayudante online virtual, es un experto en acompañamiento y recomendación.
           </p>
@@ -46,7 +48,7 @@ export default function LandingPage() {
         <div className="pt-12">
           <h3 className="text-2xl font-black text-gray-900 mb-8">Todo lo que incluye tu programa</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
-            
+
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-3 hover:border-indigo-300 transition-all hover:shadow-md">
               <span className="text-4xl">🤖</span>
               <h4 className="font-bold text-gray-900 text-lg">Coach Virtual 24/7</h4>
@@ -73,7 +75,7 @@ export default function LandingPage() {
 
           </div>
         </div>
-        
+
       </div>
 
       <footer className="text-center text-xs text-gray-400 pt-12 pb-4">
