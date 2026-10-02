@@ -8,12 +8,11 @@
     "start": "next start",
     "lint": "next lint"
   },
-  "dependencies": {
+    "dependencies": {
     "react": "^18",
     "react-dom": "^18",
     "next": "14.2.35",
     "pg": "^8.11.3",
-    "pg-protocol": "^1.16.0",
     "next-auth": "^4.24.7",
     "bcryptjs": "^2.4.3",
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -21,6 +20,7 @@
     "openai": "^4.0.0",
     "web-push": "^3.6.6"
   },
+
   "devDependencies": {
     "typescript": "^5",
     "@types/node": "^20",
