@@ -8,7 +8,7 @@ import PushNotificationBanner from '@/components/PushNotificationBanner';
 // ==========================================
 // COMPONENTE INTEGRADO: Coach IA Flotante
 // ==========================================
-function AICoachChat({ email }: { email: string }) {
+function AICoachChat({ email, meals }: { email: string; meals: any }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: 'assistant', text: '¡Hola! Soy tu coach personal de "TIENES EL CONTROL". Estoy aquí 24/7 para resolver cualquier duda sobre tu dieta, tus porciones, el ayuno o si tienes un antojo repentino. ¿En qué te ayudo ahora? 💪' }
@@ -35,7 +35,6 @@ function AICoachChat({ email }: { email: string }) {
     setInputMessage('');
     
     // Recopilamos el historial para que la IA recuerde de qué estamos hablando
-    // Ignoramos el mensaje de saludo automático (índice 0) para ahorrar tokens
     const historyToSend = messages.slice(1).map(msg => ({
       role: msg.role,
       text: msg.text
@@ -51,20 +50,19 @@ function AICoachChat({ email }: { email: string }) {
         body: JSON.stringify({ 
           prompt: userText, 
           email,
-          chatHistory: historyToSend // Enviamos la memoria al backend
+          chatHistory: historyToSend,
+          currentMeals: meals // Enviamos las comidas actuales para que la IA las analice y aconseje
         })
       });
 
       const data = await res.json();
       
-      // Si hay un error de código o conexión, que te lo muestre en pantalla para saber qué pasa
       if (!data.success && data.error) {
         setMessages((prev) => [...prev, { role: 'assistant', text: `⚠️ Error interno: ${data.error}` }]);
         setLoading(false);
         return;
       }
 
-      // Si todo va bien (o si alcanzó un límite), muestra la respuesta real o el aviso de límite
       const assistantReply = data.reply || data.text || "¡Aquí estoy para ayudarte!";
       
       setMessages((prev) => [...prev, { role: 'assistant', text: assistantReply }]);
@@ -187,7 +185,7 @@ function DashboardContent() {
   const [isFasting, setIsFasting] = useState(false);
   const [fastingSeconds, setFastingSeconds] = useState(0);
   const [targetHours, setTargetHours] = useState<number>(16);
-  const [waterGlasses, setWaterGlasses] = useState(0); // Iniciado en 0
+  const [waterGlasses, setWaterGlasses] = useState(0);
   const [waterTarget, setWaterTarget] = useState<number>(8);
   const [fastingStreak, setFastingStreak] = useState(3);
 
@@ -198,7 +196,7 @@ function DashboardContent() {
   const [hasActivity, setHasActivity] = useState(false);
   const [activityType, setActivityType] = useState('');
 
-  // Nuevo estado para el registro de comidas con texto
+  // Estado para el registro de comidas con texto
   const [mealsText, setMealsText] = useState({
     breakfast: '',
     snack1: '',
@@ -208,6 +206,24 @@ function DashboardContent() {
     snack3: '',
     dinner: ''
   });
+
+  // Función para guardar automáticamente las comidas en el servidor
+  const handleMealChange = async (key: string, value: string) => {
+    const updatedMeals = { ...mealsText, [key]: value };
+    setMealsText(updatedMeals);
+
+    if (!userEmail || userEmail === 'usuario@ayuno.com') return;
+
+    try {
+      await fetch('/api/meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, ...updatedMeals })
+      });
+    } catch (err) {
+      console.error('Error al autoguardar comida:', err);
+    }
+  };
 
   const [currentTip, setCurrentTip] = useState<{phase: string, title: string, content: string} | null>(null);
 
@@ -258,6 +274,21 @@ function DashboardContent() {
           if (m.weight_loss_method) setWeightLossMethod(m.weight_loss_method);
           if (m.has_activity !== undefined) setHasActivity(m.has_activity);
           if (m.activity_type) setActivityType(m.activity_type);
+        }
+
+        // Cargar las comidas registradas del día de hoy
+        const mealsRes = await fetch(`/api/meals?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
+        const mealsData = await mealsRes.json();
+        if (mealsData.success && mealsData.meals) {
+          setMealsText({
+            breakfast: mealsData.meals.breakfast || '',
+            snack1: mealsData.meals.snack1 || '',
+            lunch: mealsData.meals.lunch || '',
+            snack2: mealsData.meals.snack2 || '',
+            merienda: mealsData.meals.merienda || '',
+            snack3: mealsData.meals.snack3 || '',
+            dinner: mealsData.meals.dinner || ''
+          });
         }
       } catch (err) {
         console.error('Error al cargar datos iniciales:', err);
@@ -629,7 +660,7 @@ function DashboardContent() {
                       type="text"
                       placeholder={meal.placeholder}
                       value={(mealsText as any)[meal.key]}
-                      onChange={(e) => setMealsText({ ...mealsText, [meal.key]: e.target.value })}
+                      onChange={(e) => handleMealChange(meal.key, e.target.value)}
                       className="w-full text-sm text-gray-800 bg-transparent border-none outline-none placeholder-gray-300"
                     />
                   </div>
@@ -639,7 +670,7 @@ function DashboardContent() {
             
             <div className="bg-white/80 p-3 rounded-xl border border-indigo-200 text-center text-sm font-bold text-indigo-900 shadow-sm flex justify-center items-center gap-2">
               <span className="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
-                {Object.values(mealsText).filter(text => text.trim().length > 0).length}
+                {Object.values(mealsText).filter(text => typeof text === 'string' && text.trim().length > 0).length}
               </span> 
               Comidas descritas hoy
             </div>
@@ -729,8 +760,8 @@ function DashboardContent() {
         <p className="text-sm text-emerald-600 font-semibold">Programa Especialista Adaptativo Activo ✓</p>
       </div>
 
-      {/* Renderizado del Coach IA integrado */}
-      <AICoachChat email={userEmail} />
+      {/* Renderizado del Coach IA integrado pasándole las comidas */}
+      <AICoachChat email={userEmail} meals={mealsText} />
 
     </div>
   );
