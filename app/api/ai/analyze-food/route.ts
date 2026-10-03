@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     // 3. LLAMADA A GEMINI FLASH (Consumo real)
     // ==========================================
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3-flash-preview',
       systemInstruction: `
         Eres el coach experto en ayuno intermitente, nutrición adaptativa y hábitos saludables de la aplicación "TIENES EL CONTROL".
         Tu tono es motivador, empático, firme pero amigable. 
