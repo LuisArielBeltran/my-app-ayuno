@@ -1,50 +1,185 @@
 export const dynamic = 'force-dynamic';
-import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import pool from '@/lib/db'; // Importamos la conexión a la base de datos
 
-export async function POST(request: Request) {
+// Inicializar el SDK oficial de Google Gen AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+// ==========================================
+// FILTRO LOCAL INTELIGENTE (Gratis - No suma consumo)
+// ==========================================
+function checkLocalFastAnswer(text: string): string | null {
+  const lower = text.toLowerCase().trim();
+  
+  if (lower.includes('agua') && (lower.includes('rompe') || lower.includes('ayuno') || lower.includes('toma') || lower.includes('beber'))) {
+    return '💧 El agua pura no rompe el ayuno en absoluto. Es la base fundamental para mantener la hidratación, evitar la fatiga y potenciar la limpieza celular.';
+  }
+  if (lower.includes('mate') && (lower.includes('rompe') || lower.includes('ayuno') || lower.includes('amargo'))) {
+    if (lower.includes('dulce') || lower.includes('azúcar') || lower.includes('miel')) {
+      return '❌ El mate dulce, con azúcar o miel sí rompe el ayuno de inmediato debido al pico de insulina.';
+    }
+    return '🧉 El mate amargo (cimarrón o mate solo con yerba y agua) está completamente permitido. No eleva la glucosa y aporta excelentes antioxidantes.';
+  }
+  if (lower.includes('café') && (lower.includes('rompe') || lower.includes('ayuno'))) {
+    if (lower.includes('leche') || lower.includes('crema') || lower.includes('azúcar') || lower.includes('cortado')) {
+      return '❌ El café con leche, crema o azúcar rompe el ayuno por la presencia de lactosa y proteínas/grasas que activan la digestión.';
+    }
+    return '☕ El café negro, espresso o americano sin azúcar ni leche está totalmente permitido y estimula la autofagia y la quema de grasa.';
+  }
+  if (lower.includes('té') && (lower.includes('rompe') || lower.includes('ayuno'))) {
+    return '🍵 Las infusiones de té verde, negro o hierbas (manzanilla, boldo, menta) sin azúcar ni endulzantes calóricos están permitidas y no generan respuesta glucémica.';
+  }
+  return null;
+}
+
+export async function POST(req: NextRequest) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ success: false, error: 'Falta configurar la API Key de OpenAI' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'Falta configurar la GEMINI_API_KEY en el servidor' }, { status: 500 });
     }
 
-    const { imageBase64 } = await request.json();
-    if (!imageBase64) {
-      return NextResponse.json({ success: false, error: 'No se proporcionó ninguna imagen' }, { status: 400 });
+    const body = await req.json();
+    const { prompt, imageBase64, email } = body;
+
+    if (!email) {
+      return NextResponse.json({ success: false, error: 'Falta el email del usuario para validar consumo' }, { status: 400 });
     }
 
-    const openai = new OpenAI({ apiKey });
+    const userText = prompt || '¿Esta comida rompe mi ayuno y qué componentes tiene?';
+    const isImageQuery = !!imageBase64;
 
-    // Llamada al modelo multimodal (ej. gpt-4o-mini o gpt-4o)
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'Eres un nutriente experto en ayuno intermitente. Analiza la comida de la imagen y responde estrictamente en formato JSON con las siguientes claves: breaks_fast (boolean: true si rompe el ayuno, false si está permitido), food_detected (string con lo que ves), explanation (por qué afecta o no al ayuno metabólico) y suggestion (un consejo breve).'
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: '¿Esta comida rompe mi ayuno y qué componentes tiene?' },
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageBase64,
-              },
-            },
-          ],
-        },
-      ],
-      response_format: { type: 'json_object' },
+    // 1. COMPROBACIÓN LOCAL: Respondemos dudas frecuentes sin gastar tokens ni límite del usuario
+    if (!isImageQuery && userText) {
+      const localAnswer = checkLocalFastAnswer(userText);
+      if (localAnswer) {
+        return NextResponse.json({ 
+          success: true, 
+          text: localAnswer, 
+          reply: localAnswer, 
+          source: 'local_cache' 
+        });
+      }
+    }
+
+    // ==========================================
+    // 2. VERIFICACIÓN DE LÍMITES EN BASE DE DATOS
+    // ==========================================
+    
+    // Asegurarnos de que el usuario tenga un registro creado para el día de HOY
+    await pool.query(`
+      INSERT INTO user_ai_usage (email, usage_date, text_queries_count, image_queries_count, plan_type)
+      VALUES ($1, CURRENT_DATE, 0, 0, 'basic')
+      ON CONFLICT (email, usage_date) DO NOTHING;
+    `, [email]);
+
+    // Consultar cuánto ha consumido hoy y qué plan tiene
+    const usageResult = await pool.query(`
+      SELECT text_queries_count, image_queries_count, plan_type 
+      FROM user_ai_usage 
+      WHERE email = $1 AND usage_date = CURRENT_DATE;
+    `, [email]);
+
+    const usage = usageResult.rows[0];
+    const plan = usage.plan_type || 'basic'; // 'basic' o 'plus'
+
+    // Definir los límites estructurales de tu negocio
+    const limits = {
+      basic: { text: 4, image: 2 },
+      plus: { text: 10, image: 5 }
+    };
+    const currentLimits = plan === 'plus' ? limits.plus : limits.basic;
+
+    // Bloqueo si excedió límite de FOTOS
+    if (isImageQuery && usage.image_queries_count >= currentLimits.image) {
+      return NextResponse.json({
+        success: false,
+        limitReached: true,
+        limitType: 'image',
+        reply: '📸 Has alcanzado tu límite diario de análisis de fotos. ¡Pásate al Plan Plus para seguir escaneando tus platos y potenciar tus resultados!'
+      });
+    }
+
+    // Bloqueo si excedió límite de TEXTO
+    if (!isImageQuery && usage.text_queries_count >= currentLimits.text) {
+      return NextResponse.json({
+        success: false,
+        limitReached: true,
+        limitType: 'text',
+        reply: '💬 Has alcanzado tu límite diario de consultas al coach. ¡Actualiza al Plan Plus para seguir chateando sin interrupciones!'
+      });
+    }
+
+    // ==========================================
+    // 3. LLAMADA A GEMINI FLASH (Consumo real)
+    // ==========================================
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-1.5-flash',
+      systemInstruction: `
+        Eres el coach experto en ayuno intermitente, nutrición adaptativa y hábitos saludables de la aplicación "TIENES EL CONTROL".
+        Tu tono es motivador, empático, firme pero amigable. 
+        Responde de forma muy concisa (máximo 3 párrafos cortos). 
+        Si el usuario te consulta sobre un plato o alimento, aclara si rompe o no el ayuno y da un consejo práctico breve.
+      `
     });
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
+    let contents: any[] = [];
 
-    return NextResponse.json({ success: true, analysis: result });
+    if (isImageQuery) {
+      let base64Data = imageBase64;
+      let mimeType = 'image/jpeg';
+      
+      if (imageBase64.includes('base64,')) {
+        const parts = imageBase64.split('base64,');
+        mimeType = parts[0].replace('data:', '').replace(';', '');
+        base64Data = parts[1];
+      }
+
+      contents = [
+        { inlineData: { data: base64Data, mimeType: mimeType } },
+        { text: userText }
+      ];
+    } else {
+      contents = [{ text: userText }];
+    }
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: contents }],
+      generationConfig: {
+        maxOutputTokens: 300,
+        temperature: 0.7,
+      }
+    });
+
+    const replyText = result.response.text() || '¡Aquí estoy contigo! Mantén tu enfoque y recuerda que tú tienes el control.';
+
+    // ==========================================
+    // 4. ACTUALIZAR CONTADOR DE CONSUMO
+    // ==========================================
+    // Solo sumamos el contador si la IA respondió con éxito
+    if (isImageQuery) {
+      await pool.query(`
+        UPDATE user_ai_usage 
+        SET image_queries_count = image_queries_count + 1 
+        WHERE email = $1 AND usage_date = CURRENT_DATE;
+      `, [email]);
+    } else {
+      await pool.query(`
+        UPDATE user_ai_usage 
+        SET text_queries_count = text_queries_count + 1 
+        WHERE email = $1 AND usage_date = CURRENT_DATE;
+      `, [email]);
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      text: replyText, 
+      reply: replyText 
+    });
+
   } catch (error: any) {
-    console.error('Error analizando la imagen con IA:', error);
+    console.error('Error en API de IA con Gemini:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
