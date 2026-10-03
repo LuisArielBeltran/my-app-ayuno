@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    // Agregamos chatHistory para recibir la memoria de la conversación
-    const { prompt, imageBase64, email, chatHistory } = body;
+    // Recibimos chatHistory y currentMeals para enriquecer el contexto del coach
+    const { prompt, imageBase64, email, chatHistory, currentMeals } = body;
 
     if (!email) {
       return NextResponse.json({ success: false, error: 'Falta el email del usuario para validar consumo' }, { status: 400 });
@@ -90,24 +90,41 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // --- LLAMADA A GEMINI CON MEMORIA ---
+    // --- LLAMADA A GEMINI CON CONTEXTO Y MEMORIA ---
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3-flash-preview',
       systemInstruction: `
         Eres el coach experto en ayuno intermitente y nutrición de la aplicación "TIENES EL CONTROL".
         Tu tono es motivador, empático y firme. 
         Si el usuario te pide una receta, plan de comidas o menú, responde de forma estructurada y completa. 
-        NUNCA dejes oraciones a la mitad ni ideas incompletas.
+        NUNCA dejes oraciones a la mitad ni ideas incompletas. Utiliza el registro de comidas del día del usuario para ofrecerle respuestas y recomendaciones ultra personalizadas.
       `
     });
 
-    // Inyectamos el historial de forma invisible en el prompt
+    // Construcción del contexto dinámico (Inyectando comidas y chat previo)
     let finalPromptText = userText;
+    let contextString = "";
+
+    if (currentMeals) {
+      const comidasRegistradas = Object.entries(currentMeals)
+        .filter(([_, text]) => typeof text === 'string' && text.trim() !== '')
+        .map(([meal, text]) => `- ${meal}: ${text}`)
+        .join('\n');
+        
+      if (comidasRegistradas) {
+        contextString += `[ALIMENTACIÓN REGISTRADA POR EL USUARIO HOY]\n${comidasRegistradas}\n\n`;
+      }
+    }
+
     if (chatHistory && chatHistory.length > 0) {
       const historyString = chatHistory
         .map((m: any) => `${m.role === 'user' ? 'Usuario' : 'Coach'}: ${m.text}`)
         .join('\n');
-      finalPromptText = `[Contexto de la conversación previa]\n${historyString}\n\n[Mensaje actual del usuario]\n${userText}`;
+      contextString += `[CONTEXTO DE LA CONVERSACIÓN PREVIA]\n${historyString}\n\n`;
+    }
+
+    if (contextString) {
+      finalPromptText = `${contextString}[MENSAJE ACTUAL DEL USUARIO]\n${userText}`;
     }
 
     let contents: any[] = [];
@@ -131,7 +148,7 @@ export async function POST(req: NextRequest) {
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: contents }],
       generationConfig: {
-        maxOutputTokens: 1000, // <-- AUMENTADO PARA PERMITIR RECETAS COMPLETAS
+        maxOutputTokens: 1000,
         temperature: 0.7,
       }
     });
