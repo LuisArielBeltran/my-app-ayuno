@@ -1,14 +1,10 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import pool from '@/lib/db'; // Importamos la conexión a la base de datos
+import pool from '@/lib/db';
 
-// Inicializar el SDK oficial de Google Gen AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-// ==========================================
-// FILTRO LOCAL INTELIGENTE (Gratis - No suma consumo)
-// ==========================================
 function checkLocalFastAnswer(text: string): string | null {
   const lower = text.toLowerCase().trim();
   
@@ -37,11 +33,12 @@ export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ success: false, error: 'Falta configurar la GEMINI_API_KEY en el servidor' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'Falta configurar la GEMINI_API_KEY' }, { status: 500 });
     }
 
     const body = await req.json();
-    const { prompt, imageBase64, email } = body;
+    // Agregamos chatHistory para recibir la memoria de la conversación
+    const { prompt, imageBase64, email, chatHistory } = body;
 
     if (!email) {
       return NextResponse.json({ success: false, error: 'Falta el email del usuario para validar consumo' }, { status: 400 });
@@ -50,31 +47,20 @@ export async function POST(req: NextRequest) {
     const userText = prompt || '¿Esta comida rompe mi ayuno y qué componentes tiene?';
     const isImageQuery = !!imageBase64;
 
-    // 1. COMPROBACIÓN LOCAL: Respondemos dudas frecuentes sin gastar tokens ni límite del usuario
     if (!isImageQuery && userText) {
       const localAnswer = checkLocalFastAnswer(userText);
       if (localAnswer) {
-        return NextResponse.json({ 
-          success: true, 
-          text: localAnswer, 
-          reply: localAnswer, 
-          source: 'local_cache' 
-        });
+        return NextResponse.json({ success: true, text: localAnswer, reply: localAnswer, source: 'local_cache' });
       }
     }
 
-    // ==========================================
-    // 2. VERIFICACIÓN DE LÍMITES EN BASE DE DATOS
-    // ==========================================
-    
-    // Asegurarnos de que el usuario tenga un registro creado para el día de HOY
+    // --- VERIFICACIÓN DE LÍMITES EN BASE DE DATOS ---
     await pool.query(`
       INSERT INTO user_ai_usage (email, usage_date, text_queries_count, image_queries_count, plan_type)
       VALUES ($1, CURRENT_DATE, 0, 0, 'basic')
       ON CONFLICT (email, usage_date) DO NOTHING;
     `, [email]);
 
-    // Consultar cuánto ha consumido hoy y qué plan tiene
     const usageResult = await pool.query(`
       SELECT text_queries_count, image_queries_count, plan_type 
       FROM user_ai_usage 
@@ -82,101 +68,84 @@ export async function POST(req: NextRequest) {
     `, [email]);
 
     const usage = usageResult.rows[0];
-    const plan = usage.plan_type || 'basic'; // 'basic' o 'plus'
+    const plan = usage.plan_type || 'basic';
 
-    // Definir los límites estructurales de tu negocio
     const limits = {
       basic: { text: 4, image: 2 },
       plus: { text: 10, image: 5 }
     };
     const currentLimits = plan === 'plus' ? limits.plus : limits.basic;
 
-    // Bloqueo si excedió límite de FOTOS
     if (isImageQuery && usage.image_queries_count >= currentLimits.image) {
       return NextResponse.json({
-        success: false,
-        limitReached: true,
-        limitType: 'image',
-        reply: '📸 Has alcanzado tu límite diario de análisis de fotos. ¡Pásate al Plan Plus para seguir escaneando tus platos y potenciar tus resultados!'
+        success: false, limitReached: true, limitType: 'image',
+        reply: '📸 Has alcanzado tu límite diario de análisis de fotos. ¡Pásate al Plan Plus para seguir escaneando tus platos!'
       });
     }
 
-    // Bloqueo si excedió límite de TEXTO
     if (!isImageQuery && usage.text_queries_count >= currentLimits.text) {
       return NextResponse.json({
-        success: false,
-        limitReached: true,
-        limitType: 'text',
-        reply: '💬 Has alcanzado tu límite diario de consultas al coach. ¡Actualiza al Plan Plus para seguir chateando sin interrupciones!'
+        success: false, limitReached: true, limitType: 'text',
+        reply: '💬 Has alcanzado tu límite diario de consultas al coach. ¡Actualiza al Plan Plus para seguir chateando!'
       });
     }
 
-    // ==========================================
-    // 3. LLAMADA A GEMINI FLASH (Consumo real)
-    // ==========================================
+    // --- LLAMADA A GEMINI CON MEMORIA ---
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3-flash-preview',
       systemInstruction: `
-        Eres el coach experto en ayuno intermitente, nutrición adaptativa y hábitos saludables de la aplicación "TIENES EL CONTROL".
-        Tu tono es motivador, empático, firme pero amigable. 
-        Responde de forma muy concisa (máximo 3 párrafos cortos). 
-        Si el usuario te consulta sobre un plato o alimento, aclara si rompe o no el ayuno y da un consejo práctico breve.
+        Eres el coach experto en ayuno intermitente y nutrición de la aplicación "TIENES EL CONTROL".
+        Tu tono es motivador, empático y firme. 
+        Si el usuario te pide una receta, plan de comidas o menú, responde de forma estructurada y completa. 
+        NUNCA dejes oraciones a la mitad ni ideas incompletas.
       `
     });
+
+    // Inyectamos el historial de forma invisible en el prompt
+    let finalPromptText = userText;
+    if (chatHistory && chatHistory.length > 0) {
+      const historyString = chatHistory
+        .map((m: any) => `${m.role === 'user' ? 'Usuario' : 'Coach'}: ${m.text}`)
+        .join('\n');
+      finalPromptText = `[Contexto de la conversación previa]\n${historyString}\n\n[Mensaje actual del usuario]\n${userText}`;
+    }
 
     let contents: any[] = [];
 
     if (isImageQuery) {
       let base64Data = imageBase64;
       let mimeType = 'image/jpeg';
-      
       if (imageBase64.includes('base64,')) {
         const parts = imageBase64.split('base64,');
         mimeType = parts[0].replace('data:', '').replace(';', '');
         base64Data = parts[1];
       }
-
       contents = [
         { inlineData: { data: base64Data, mimeType: mimeType } },
-        { text: userText }
+        { text: finalPromptText }
       ];
     } else {
-      contents = [{ text: userText }];
+      contents = [{ text: finalPromptText }];
     }
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: contents }],
       generationConfig: {
-        maxOutputTokens: 300,
+        maxOutputTokens: 1000, // <-- AUMENTADO PARA PERMITIR RECETAS COMPLETAS
         temperature: 0.7,
       }
     });
 
-    const replyText = result.response.text() || '¡Aquí estoy contigo! Mantén tu enfoque y recuerda que tú tienes el control.';
+    const replyText = result.response.text() || '¡Aquí estoy contigo! Mantén tu enfoque.';
 
-    // ==========================================
-    // 4. ACTUALIZAR CONTADOR DE CONSUMO
-    // ==========================================
-    // Solo sumamos el contador si la IA respondió con éxito
+    // --- ACTUALIZAR CONTADOR ---
     if (isImageQuery) {
-      await pool.query(`
-        UPDATE user_ai_usage 
-        SET image_queries_count = image_queries_count + 1 
-        WHERE email = $1 AND usage_date = CURRENT_DATE;
-      `, [email]);
+      await pool.query(`UPDATE user_ai_usage SET image_queries_count = image_queries_count + 1 WHERE email = $1 AND usage_date = CURRENT_DATE;`, [email]);
     } else {
-      await pool.query(`
-        UPDATE user_ai_usage 
-        SET text_queries_count = text_queries_count + 1 
-        WHERE email = $1 AND usage_date = CURRENT_DATE;
-      `, [email]);
+      await pool.query(`UPDATE user_ai_usage SET text_queries_count = text_queries_count + 1 WHERE email = $1 AND usage_date = CURRENT_DATE;`, [email]);
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      text: replyText, 
-      reply: replyText 
-    });
+    return NextResponse.json({ success: true, text: replyText, reply: replyText });
 
   } catch (error: any) {
     console.error('Error en API de IA con Gemini:', error);
