@@ -121,7 +121,7 @@ export async function GET() {
       );
     `);
 
-    // 8. NUEVA: Tabla de Control de Consumo Diario de IA
+    // 8. Tabla de Control de Consumo Diario de IA
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_ai_usage (
         id SERIAL PRIMARY KEY,
@@ -134,7 +134,24 @@ export async function GET() {
       );
     `);
 
-    // 9. Tablas de Gamificación e Insignias
+    // 9. NUEVA: Tabla de Registro de Ingestas y Comidas con Texto Diario
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS daily_meals (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        log_date DATE DEFAULT CURRENT_DATE,
+        breakfast TEXT DEFAULT '',
+        snack1 TEXT DEFAULT '',
+        lunch TEXT DEFAULT '',
+        snack2 TEXT DEFAULT '',
+        merienda TEXT DEFAULT '',
+        snack3 TEXT DEFAULT '',
+        dinner TEXT DEFAULT '',
+        UNIQUE(email, log_date)
+      );
+    `);
+
+    // 10. Tablas de Gamificación e Insignias
     await pool.query(`
       CREATE TABLE IF NOT EXISTS badges (
         id SERIAL PRIMARY KEY,
@@ -167,7 +184,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos optimizada y limpia con tabla de consumo de IA incorporada!' 
+      message: '¡Base de datos inicializada con éxito, incluyendo la tabla de ingestas diarias (daily_meals)!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
