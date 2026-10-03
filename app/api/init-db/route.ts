@@ -4,6 +4,13 @@ import pool from '@/lib/db';
 
 export async function GET() {
   try {
+    // 0. LIMPIEZA TOTAL: Borramos todos los datos existentes de los usuarios y tablas dependientes
+    await pool.query(`
+      TRUNCATE TABLE users, user_metrics, water_log, fasting_state, weight_logs, push_subscriptions, user_ai_usage, daily_meals, user_badges CASCADE;
+    `).catch(() => {
+      // Por si alguna tabla aún no existe en el primer arranque, evitamos que rompa
+    });
+
     // 1. Tabla de Usuarios (Actualizada con timezone)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -184,7 +191,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos inicializada con éxito, incluyendo la tabla de ingestas diarias (daily_meals)!' 
+      message: '¡Base de datos limpiada por completo y reiniciada con éxito!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
