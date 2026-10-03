@@ -3,14 +3,19 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { plan } = await req.json();
+    const { plan, email } = await req.json();
     const baseUrl = process.env.NEXTAUTH_URL || 'https://my-app-ayuno.vercel.app';
+
+    // Validación de seguridad para asegurarnos de que el email y el plan existan
+    if (!email || !plan) {
+      return NextResponse.json({ success: false, error: 'Email y suscripción requeridos' }, { status: 400 });
+    }
 
     // MODO SIMULACIÓN: Si aún no hay token de Mercado Pago, redirigimos directamente al dashboard para pruebas
     if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.trim() === '') {
       return NextResponse.json({ 
         success: true, 
-        init_point: `${baseUrl}/dashboard?success=true&simulated=true` 
+        init_point: `${baseUrl}/dashboard?email=${encodeURIComponent(email)}&success=true&simulated=true` 
       });
     }
 
@@ -23,7 +28,7 @@ export async function POST(req: Request) {
 
     const selected = prices[plan] || prices['12'];
 
-    // Petición oficial a Mercado Pago
+    // Petición oficial a Mercado Pago (incluyendo metadatos con el email para rastrear la compra)
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
@@ -39,10 +44,13 @@ export async function POST(req: Request) {
             currency_id: 'ARS',
           },
         ],
+        payer: {
+          email: email, // Vinculamos el email del usuario en Mercado Pago
+        },
         back_urls: {
-          success: `${baseUrl}/dashboard?success=true`,
-          failure: `${baseUrl}/onboarding/results?error=true`,
-          pending: `${baseUrl}/dashboard?pending=true`,
+          success: `${baseUrl}/dashboard?email=${encodeURIComponent(email)}&success=true`,
+          failure: `${baseUrl}/onboarding/results?email=${encodeURIComponent(email)}&error=true`,
+          pending: `${baseUrl}/dashboard?email=${encodeURIComponent(email)}&pending=true`,
         },
         auto_return: 'approved',
       }),
