@@ -7,9 +7,11 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const emailParam = searchParams.get('email') || '';
+  const planParam = searchParams.get('plan') || '4weeks'; // Capturamos el plan de la URL
 
   const [email, setEmail] = useState(emailParam);
   const [password, setPassword] = useState('');
+  const [plan] = useState(planParam);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -26,14 +28,15 @@ function RegisterForm() {
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     try {
-      // 1. Creamos el usuario (o le asignamos la contraseña si viene del onboarding)
-      const res = await fetch('/api/register', { // Ruta ajustada según arquitectura
+      // 1. Creamos el usuario enviando también el plan seleccionado
+      const res = await fetch('/api/register', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
           password,
-          timezone: userTimezone
+          timezone: userTimezone,
+          plan // <-- Enviamos el plan al backend para guardarlo correctamente
         })
       });
       const data = await res.json();
