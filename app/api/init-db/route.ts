@@ -60,30 +60,7 @@ export async function GET() {
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS activity_hours VARCHAR(50);
     `);
 
-    // 3. Tabla de Base de Alimentos
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS food_database (
-        id SERIAL PRIMARY KEY,
-        food_name VARCHAR(150) NOT NULL,
-        breaks_fast BOOLEAN NOT NULL,
-        category VARCHAR(50),
-        explanation TEXT,
-        synonyms TEXT
-      );
-    `);
-
-    await pool.query(`
-      ALTER TABLE food_database ADD COLUMN IF NOT EXISTS synonyms TEXT;
-      CREATE UNIQUE INDEX IF NOT EXISTS food_database_name_idx ON food_database (food_name);
-    `);
-
-    // Limpiar duplicados de alimentos
-    await pool.query(`
-      DELETE FROM food_database a USING food_database b 
-      WHERE a.id > b.id AND a.food_name = b.food_name;
-    `);
-
-    // 4. Tabla de Cápsulas de Coaching
+    // 3. Tabla de Cápsulas de Coaching
     await pool.query(`
       CREATE TABLE IF NOT EXISTS coaching_tips (
         id SERIAL PRIMARY KEY,
@@ -103,7 +80,7 @@ export async function GET() {
       (16, 'general', 'Zona de Cetosis y Autofagia', '¡Meta alcanzada! Aquí es donde ocurre la magia de la limpieza celular y la máxima optimización metabólica.');
     `);
 
-    // 5. Tabla de Hidratación
+    // 4. Tabla de Hidratación
     await pool.query(`
       CREATE TABLE IF NOT EXISTS water_log (
         id SERIAL PRIMARY KEY,
@@ -113,7 +90,7 @@ export async function GET() {
       );
     `);
 
-    // 6. Tabla de Estado de Ayuno
+    // 5. Tabla de Estado de Ayuno
     await pool.query(`
       CREATE TABLE IF NOT EXISTS fasting_state (
         id SERIAL PRIMARY KEY,
@@ -124,7 +101,7 @@ export async function GET() {
       );
     `);
 
-    // 7. Tabla de Historial de Peso y Metas
+    // 6. Tabla de Historial de Peso y Metas
     await pool.query(`
       CREATE TABLE IF NOT EXISTS weight_logs (
         id SERIAL PRIMARY KEY,
@@ -134,7 +111,7 @@ export async function GET() {
       );
     `);
 
-    // 8. NUEVA: Tabla de Suscripciones Push para las Notificaciones Insistentes
+    // 7. Tabla de Suscripciones Push para las Notificaciones Insistentes
     await pool.query(`
       CREATE TABLE IF NOT EXISTS push_subscriptions (
         id SERIAL PRIMARY KEY,
@@ -144,48 +121,7 @@ export async function GET() {
       );
     `);
 
-    // 9. Tabla de Recetas (Protegiendo columnas de macros con valores por defecto)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS recipes (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(150) NOT NULL,
-        category VARCHAR(50) NOT NULL,
-        icon_symbol VARCHAR(10) NOT NULL,
-        prep_time INT NOT NULL,
-        calories INT NOT NULL,
-        protein_g NUMERIC DEFAULT 15,
-        carbs_g NUMERIC DEFAULT 20,
-        fat_g NUMERIC DEFAULT 10,
-        ingredients TEXT NOT NULL,
-        instructions TEXT NOT NULL
-      );
-    `);
-
-    await pool.query(`
-      ALTER TABLE recipes ADD COLUMN IF NOT EXISTS protein_g NUMERIC DEFAULT 15;
-      ALTER TABLE recipes ADD COLUMN IF NOT EXISTS carbs_g NUMERIC DEFAULT 20;
-      ALTER TABLE recipes ADD COLUMN IF NOT EXISTS fat_g NUMERIC DEFAULT 10;
-    `);
-
-    await pool.query(`DELETE FROM recipes;`);
-    await pool.query(`
-      INSERT INTO recipes (title, category, icon_symbol, prep_time, calories, protein_g, carbs_g, fat_g, ingredients, instructions) 
-      VALUES 
-      ('Omelette de Espinaca y Palta', 'Romper Ayuno', '🍳', 10, 320, 18, 5, 24, '2 huevos orgánicos, 1 taza de espinacas frescas, 1/2 palta (aguacate), sal y pimienta.', 'Batir los huevos. Saltear las espinacas en una sartén con unas gotas de aceite de oliva hasta que reduzcan, verter los huevos y cocinar doblando en forma de omelette. Servir con la palta en rodajas.'),
-      ('Caldo de Huesos Reparador', 'Romper Ayuno', '🍲', 15, 95, 12, 2, 4, '500ml de caldo de huesos concentrado, una pizca de sal marina, jengibre fresco rallado.', 'Calentar el caldo de huesos a fuego lento en una olla. Añadir el jengibre rallado para estimular la digestión de forma suave. Consumir tibio.'),
-      ('Yogur Griego con Nueces y Canela', 'Romper Ayuno', '🥣', 5, 210, 20, 12, 8, '1 taza de yogur griego entero sin azúcar, 15g de nueces picadas, pizca de canela en polvo.', 'Colocar el yogur en un bol, esparcir las nueces por encima y terminar con una pizca generosa de canela para regular la glucosa.'),
-      ('Batido Verde de Transición', 'Romper Ayuno', '🥤', 7, 150, 8, 18, 3, '1 puñado de espinaca, 1/2 pepino, jugo de medio limón, 1 cucharadita de semillas de chía, agua.', 'Licuar todos los ingredientes hasta obtener una mezcla homogénea y ligera que prepare el sistema digestivo sin picos de insulina.'),
-      ('Huevos Revueltos con Tomates Cherry', 'Romper Ayuno', '🍅', 10, 280, 16, 6, 20, '2 huevos, 5 tomates cherry cortados a la mitad, aceite de coco, albahaca fresca.', 'Saltear los tomates cherry en aceite de coco hasta que estén tiernos. Añadir los huevos batidos y remover suavemente hasta lograr una textura cremosa.'),
-      ('Pudín de Chía Proteico', 'Romper Ayuno', '🌰', 5, 190, 10, 15, 9, '3 cucharadas de semillas de chía, 1 taza de leche de almendras sin azúcar, esencia de vainilla.', 'Mezclar la chía con la leche vegetal desde la noche anterior. Servir frío con unas gotas de vainilla para un despertar digestivo ideal.'),
-      ('Pollo al Horno con Brócoli y Oliva', 'Comida Principal', '🥗', 25, 420, 38, 10, 14, '1 pechuga de pollo, 1 taza de brócoli en floretes, 1 cucharada de aceite de oliva, ajo en polvo.', 'Marinar el pollo con especias y hornear a 180°C durante 20 minutos junto con el brócoli previamente rociado con aceite de oliva y sal.'),
-      ('Salmón a la Plancha con Espárragos', 'Comida Principal', '🐟', 18, 480, 34, 6, 28, '1 filete de salmón, 1 atado de espárragos frescos, jugo de limón, aceite de oliva.', 'Sellar el salmón a la plancha con la piel hacia abajo hasta que quede crujiente. Saltear los espárragos en la misma sartén con un toque de limón.'),
-      ('Carne Magra Salteada con Pimientos', 'Comida Principal', '🥩', 20, 450, 40, 12, 18, '150g de corte magro de carne vacuna, 1 pimiento rojo en tiras, cebolla, salsa de soja baja en sodio.', 'Saltear the carne en tiras a fuego vivo con la cebolla y los pimientos. Añadir un chorrito de salsa de soja al final para realzar el sabor.'),
-      ('Pechuga de Pavo con Champignones', 'Comida Principal', '🍄', 22, 380, 35, 8, 12, '150g de pechuga de pavo, 1 taza de champignones laminados, caldo de verduras, hierbas finas.', 'Dorar la pechuga, incorporar los champignones y cocinar a fuego lento con un poco de caldo hasta reducir.'),
-      ('Ensalada Completa de Atún y Huevo', 'Comida Principal', '🥗', 10, 390, 32, 8, 22, '1 lata de atún al agua, 1 huevo duro, hojas de lechuga, aceitunas negras, aceite de oliva virgen extra.', 'Armar una base de lechuga fresca, incorporar el atún escurrido, el huevo duro en gajitos y las aceitunas. Aderezar con aceite de oliva y vinagre.'),
-      ('Wok Vegetal con Tofu', 'Comida Principal', '🥦', 15, 340, 22, 25, 14, '100g de tofu firme en cubos, mix de vegetales (zucchini, zanahoria, brotes de soja), jengibre, aceite de sésamo.', 'Saltear the tofu en cubos hasta que dore. Retirar, saltear los vegetales crujientes con jengibre rallado y reincorporar el tofu al final.')
-    `);
-
-    // 10. Tablas de Gamificación e Insignias
+    // 8. Tablas de Gamificación e Insignias
     await pool.query(`
       CREATE TABLE IF NOT EXISTS badges (
         id SERIAL PRIMARY KEY,
@@ -216,40 +152,9 @@ export async function GET() {
       ON CONFLICT (badge_code) DO NOTHING;
     `);
 
-    // --- SEED DE ALIMENTOS ---
-    const foods = [
-      ['Agua', false, 'Bebidas', 'Hidrata sin generar ninguna respuesta de insulina. Es la base de cualquier ayuno.', 'agua mineral, agua de la canilla, agua purificada'],
-      ['Mate amargo / Cimarrón', false, 'Infusiones', 'Permitido. Las hojas de yerba mate sin azúcar ni miel no elevan la glucosa y aportan antioxidantes.', 'mate, cimarrón, amargo, mate solo'],
-      ['Mate dulce / con azúcar o miel', true, 'Infusiones', 'Rompe el ayuno de inmediato debido al contenido de azúcar o miel.', 'mate dulce, mate con azúcar'],
-      ['Tereré', false, 'Infusiones', 'Infusión fría de yerba mate con agua y hielo (sin jugos en polvo ni azúcar).', 'tereré'],
-      ['Café negro / Espresso / Café solo', false, 'Bebidas', 'Permitido. Estimula la autofagia y no interrumpe el ayuno metabólico.', 'café, café negro, espresso, café americano'],
-      ['Café con leche / Cortado / Lágrima', true, 'Bebidas', 'Rompe el ayuno por la lactosa y proteínas de la leche.', 'café con leche, cortado, lágrima, café con cortadito'],
-      ['Té verde / Té negro / Infusiones de hierbas (sin azúcar)', false, 'Infusiones', 'Permitidas (manzanilla, boldo, cedrón, menta). No generan respuesta glucémica.', 'té, manzanilla, té verde, té negro, infusión, cocido'],
-      ['Mate cocido', false, 'Infusiones', 'Infusión de yerba mate pura sin azúcar.', 'mate cocido'],
-      ['Stevia pura / Eritritol / Alulosa', false, 'Endulzantes', 'Endulzantes no calóricos que no afectan significativamente la glucosa en la mayoría de las personas.', 'stevia, eritritol, alulosa, monk fruit'],
-      ['Azúcar blanca / Morena / Mascabado', true, 'Endulzantes', 'Eleva drásticamente la insulina, rompiendo el ayuno por completo.', 'azúcar, azúcar blanca, azúcar morena, azúcar mascabado'],
-      ['Panela / Piloncillo / Chancaca / Papelón', true, 'Endulzantes', 'Azúcar de caña sin refinar. Rompe el ayuno de absoluto.', 'panela, piloncillo, chancaca, papelón, raspadura'],
-      ['Miel / Algarroba / Sirope', true, 'Endulzantes', 'Ricos en fructosa y glucosa, activan el metabolismo y cortan el ayuno.', 'miel, miel de abeja, algarroba, melaza, sirope'],
-      ['Leche (entera, descremada, vegetal)', true, 'Lácteos', 'Aporta macronutrientes que activan la digestión y la insulina.', 'leche, leche entera, leche descremada, leche de almendras, leche de soja'],
-      ['Manteca / Mantequilla', true, 'Grasas', 'Aunque se usa en café keto (ayuno graso), técnicamente activa la digestión. Para ayuno limpio, rompe.', 'manteca, mantequilla'],
-      ['Crema de leche / Nata', true, 'Grasas', 'Contiene calorías y grasas que inician el proceso digestivo.', 'crema de leche, nata'],
-      ['Jugo de fruta / Zumo / Licuado', true, 'Frutas', 'La fructosa libre entra directo al torrente sanguíneo cortando el ayuno y elevando la insulina.', 'jugo, zumo, licuado, exprimido, jugo de naranja'],
-      ['Vinagre de manzana (diluido en agua)', false, 'Suplementos', 'Ayuda a regular la glucosa en sangre y no rompe el ayuno si se consume diluido.', 'vinagre de manzana, ACV'],
-      ['Caldo de huesos (Bone broth)', true, 'Alimentos', 'Contiene aminoácidos y colágeno. En ayuno estricto de agua rompe; en ayuno metabólico flexible se usa con moderación.', 'caldo, caldo de huesos, consomé']
-    ];
-
-    for (const food of foods) {
-      await pool.query(`
-        INSERT INTO food_database (food_name, breaks_fast, category, explanation, synonyms)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (food_name) DO UPDATE 
-        SET breaks_fast = EXCLUDED.breaks_fast, explanation = EXCLUDED.explanation, synonyms = EXCLUDED.synonyms;
-      `, food);
-    }
-
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos inicializada perfectamente con soporte multitrack, método de peso, zonas horarias, actividad física y notificaciones push!' 
+      message: '¡Base de datos optimizada y limpia! Tablas innecesarias removidas correctamente.' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
