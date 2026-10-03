@@ -1,4 +1,13 @@
+const withPWA = require("@ducanh2912/next-pwa").default({
+  dest: "public",
+  disable: false, // ¡Activado nuevamente para la versión final de producción!
+  register: true,
+  workboxOptions: {
+    disableDevLogs: true,
+  },
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {};
 
-module.exports = nextConfig;
+module.exports = withPWA(nextConfig);
