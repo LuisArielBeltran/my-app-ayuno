@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    // Recibimos chatHistory y currentMeals para enriquecer el contexto del coach
     const { prompt, imageBase64, email, chatHistory, currentMeals } = body;
 
     if (!email) {
@@ -90,14 +89,34 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // --- LLAMADA A GEMINI CON CONTEXTO Y MEMORIA ---
+    // --- CONSULTAR EL TIPO DE DIETA DEL USUARIO DESDE LA BD ---
+    // Buscamos en user_metrics vinculado a la tabla users por email
+    const dietResult = await pool.query(`
+      UM.diet_type FROM user_metrics UM
+      JOIN users U ON UM.user_id = U.id
+      WHERE U.email = $1;
+    `, [email]).catch(() => null);
+
+    // Fallback por si la consulta directa falla o el usuario aún no tiene métricas guardadas
+    let userDietType = 'omnivore';
+    if (dietResult && dietResult.rows.length > 0 && dietResult.rows[0].diet_type) {
+      userDietType = dietResult.rows[0].diet_type.toLowerCase();
+    }
+
+    // --- LLAMADA A GEMINI CON CONTEXTO Y PERFIL DIETÉTICO ADAPTATIVO ---
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3-flash-preview',
       systemInstruction: `
-        Eres el coach experto en ayuno intermitente y nutrición de la aplicación "TIENES EL CONTROL".
+        Eres el coach experto en ayuno intermitente, nutrición clínica y adaptativa de la aplicación "TIENES EL CONTROL".
         Tu tono es motivador, empático y firme. 
-        Si el usuario te pide una receta, plan de comidas o menú, responde de forma estructurada y completa. 
-        NUNCA dejes oraciones a la mitad ni ideas incompletas. Utiliza el registro de comidas del día del usuario para ofrecerle respuestas y recomendaciones ultra personalizadas.
+
+        PERFIL NUTRICIONAL ESTRICTO DEL USUARIO ACTUAL: ${userDietType.toUpperCase()}
+        - Si es OMNÍVORO: Puede consumir cualquier fuente de proteína animal y vegetal de manera equilibrada.
+        - Si es VEGETARIANO: Excluye absolutamente carnes, pescados y mariscos. Consume huevos, lácteos y derivados vegetales. NUNCA recomiendes carnes, aves ni caldos de origen animal.
+        - Si es VEGANO: Excluye 100% cualquier producto de origen animal (carne, pescado, huevos, lácteos, miel). Todas tus recomendaciones de proteínas, calorías y micronutrientes deben basarse estrictamente en fuentes vegetales (legumbres, tofu, tempeh, frutos secos, semillas).
+
+        Si el usuario te pide una receta, plan de comidas o menú, responde de forma estructurada y completa acorde a su perfil dietético. 
+        NUNCA dejes oraciones a la mitad ni ideas incompletas. Utiliza el registro de comidas del día y el historial para ofrecerle respuestas y recomendaciones ultra personalizadas y seguras para su salud.
       `
     });
 
