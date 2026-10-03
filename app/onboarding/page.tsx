@@ -6,12 +6,13 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
-  // Memoria temporal del cuestionario extendida
+
+  // Memoria temporal del cuestionario extendida (con edad incluida)
   const [formData, setFormData] = useState({
     goal: '',
     weightLossMethod: 'fasting',
     gender: '',
+    age: '', // <-- Añadido
     height: '',
     weight: '',
     targetWeight: '',
@@ -26,17 +27,28 @@ export default function OnboardingPage() {
     email: ''
   });
 
-  // Lógica de cálculo de pasos
+  // Lógica de cálculo de pasos actualizada
   const isWeightLoss = formData.goal === 'Bajar peso y mantenerme';
-  const totalSteps = isWeightLoss ? 10 : 9; // Sumamos 1 paso general para la actividad física
+  const totalSteps = isWeightLoss ? 11 : 10; 
   const progress = (step / totalSteps) * 100;
 
-  // Mapeo limpio de pantallas
+  // Mapeo limpio de pantallas incluyendo el paso de la edad
   const getScreenType = () => {
     if (step === 1) return 'goal';
     if (isWeightLoss) {
       if (step === 2) return 'weightLossMethod';
       if (step === 3) return 'gender';
+      if (step === 4) return 'age'; // <-- Pantalla de edad
+      if (step === 5) return 'measurements';
+      if (step === 6) return 'targetWeight';
+      if (step === 7) return 'activity';
+      if (step === 8) return 'schedule';
+      if (step === 9) return 'diet';
+      if (step === 10) return 'water';
+      if (step === 11) return 'summary';
+    } else {
+      if (step === 2) return 'gender';
+      if (step === 3) return 'age'; // <-- Pantalla de edad
       if (step === 4) return 'measurements';
       if (step === 5) return 'targetWeight';
       if (step === 6) return 'activity';
@@ -44,15 +56,6 @@ export default function OnboardingPage() {
       if (step === 8) return 'diet';
       if (step === 9) return 'water';
       if (step === 10) return 'summary';
-    } else {
-      if (step === 2) return 'gender';
-      if (step === 3) return 'measurements';
-      if (step === 4) return 'targetWeight';
-      if (step === 5) return 'activity';
-      if (step === 6) return 'schedule';
-      if (step === 7) return 'diet';
-      if (step === 8) return 'water';
-      if (step === 9) return 'summary';
     }
     return 'goal';
   };
@@ -65,7 +68,16 @@ export default function OnboardingPage() {
   };
 
   const nextStep = () => {
-    // Validaciones
+    // Validaciones de edad
+    if (currentScreen === 'age') {
+      const a = parseInt(formData.age);
+      if (isNaN(a) || a < 10 || a > 120) {
+        alert('Por favor ingresa una edad válida (entre 10 y 120 años).');
+        return;
+      }
+    }
+
+    // Validaciones de medidas
     if (currentScreen === 'measurements') {
       const h = parseFloat(formData.height.replace(',', '.'));
       const w = parseFloat(formData.weight.replace(',', '.'));
@@ -113,7 +125,7 @@ export default function OnboardingPage() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         setTimeout(() => {
           router.push(`/onboarding/results?email=${encodeURIComponent(formData.email)}`);
@@ -139,13 +151,12 @@ export default function OnboardingPage() {
     );
   }
 
-  // Estilo unificado para botones de selección simple
   const optionButtonClass = "w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-600 hover:bg-indigo-50 shadow-sm transition-all font-bold text-gray-700";
 
   return (
     <div className="min-h-screen bg-white md:bg-gray-50">
       <div className="max-w-md mx-auto md:mt-10 min-h-screen md:min-h-0 bg-white md:rounded-2xl md:shadow-lg overflow-hidden flex flex-col">
-        
+
         {/* Header y Barra de Progreso Sincronizada */}
         <div className="px-6 pt-6 pb-2">
           <div className="flex items-center justify-between mb-4">
@@ -162,7 +173,7 @@ export default function OnboardingPage() {
 
         {/* Contenido Dinámico según la Pantalla */}
         <div className="flex-1 px-6 py-8 overflow-y-auto">
-          
+
           {/* 1. OBJETIVO PRINCIPAL */}
           {currentScreen === 'goal' && (
             <div className="animate-fade-in-up">
@@ -183,7 +194,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* 2. MÉTODO DE DESCENSO */}
+          {/* 2. MÉTODO DE DESCENSO (Solo si baja de peso) */}
           {currentScreen === 'weightLossMethod' && (
             <div className="animate-fade-in-up">
               <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Personalización</span>
@@ -202,7 +213,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* 3. GÉNERO */}
+          {/* GÉNERO */}
           {currentScreen === 'gender' && (
             <div className="animate-fade-in-up">
               <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Biometría</span>
@@ -221,7 +232,36 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* 4. MEDIDAS ACTUALES */}
+          {/* EDAD (Nueva Pantalla) */}
+          {currentScreen === 'age' && (
+            <div className="animate-fade-in-up">
+              <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Biometría</span>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Cuál es tu edad?</h2>
+              <p className="text-gray-500 mb-6 text-sm">Este dato es fundamental para ajustar tu plan metabólico.</p>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Edad (años)</label>
+                  <input 
+                    type="text" 
+                    inputMode="numeric" 
+                    placeholder="Ej. 30" 
+                    value={formData.age} 
+                    onChange={(e) => setFormData({...formData, age: e.target.value})} 
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-xl focus:border-indigo-600 focus:ring-0 outline-none shadow-sm transition-all" 
+                  />
+                </div>
+                <button 
+                  onClick={nextStep} 
+                  disabled={!formData.age} 
+                  className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-md"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MEDIDAS ACTUALES */}
           {currentScreen === 'measurements' && (
             <div className="animate-fade-in-up">
               <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Perfil Corporal</span>
@@ -243,7 +283,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* 5. PESO OBJETIVO */}
+          {/* PESO OBJETIVO */}
           {currentScreen === 'targetWeight' && (
             <div className="animate-fade-in-up">
               <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Tu Meta</span>
@@ -263,26 +303,24 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* 6. ACTIVIDAD FÍSICA (Nueva Pantalla) */}
+          {/* ACTIVIDAD FÍSICA */}
           {currentScreen === 'activity' && (
             <div className="animate-fade-in-up">
               <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Estilo de Vida</span>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-2">¿Realizas actividad física?</h2>
               <p className="text-gray-500 mb-6 text-sm">Esto ajustará tus necesidades calóricas e hídricas que la IA procesará.</p>
 
-              {/* Pregunta Inicial */}
               {formData.hasActivity === null && (
                 <div className="space-y-3">
                   <button onClick={() => setFormData({...formData, hasActivity: true})} className={optionButtonClass}>
                     🏃‍♂️ Sí, realizo ejercicio
                   </button>
                   <button onClick={() => { setFormData({...formData, hasActivity: false}); setTimeout(() => nextStep(), 300); }} className={optionButtonClass}>
-                    🛋️ No, soy sedentario/a
+                    🛋️️ No, soy sedentario/a
                   </button>
                 </div>
               )}
 
-              {/* Si respondió SÍ, mostramos el detalle */}
               {formData.hasActivity === true && (
                 <div className="space-y-6 animate-fade-in">
                   <div>
@@ -336,7 +374,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* 7. HORARIOS BIOLÓGICOS */}
+          {/* HORARIOS BIOLÓGICOS */}
           {currentScreen === 'schedule' && (
             <div className="animate-fade-in-up space-y-6">
               <div className="text-center">
@@ -360,7 +398,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* 8. TIPO DE DIETA */}
+          {/* TIPO DE DIETA */}
           {currentScreen === 'diet' && (
             <div className="animate-fade-in-up">
               <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Nutrición</span>
@@ -381,7 +419,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* 9. HÁBITOS DE AGUA */}
+          {/* HÁBITOS DE AGUA */}
           {currentScreen === 'water' && (
             <div className="animate-fade-in-up">
               <span className="text-indigo-600 text-xs font-bold uppercase tracking-widest block mb-1">Hidratación</span>
@@ -402,7 +440,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* 10. RESUMEN Y CORREO */}
+          {/* RESUMEN Y CORREO */}
           {currentScreen === 'summary' && (
             <div className="animate-fade-in-up space-y-5">
               <div className="text-center">
@@ -417,6 +455,7 @@ export default function OnboardingPage() {
                   <span>{formData.weight || '85'} kg ➔ {formData.targetWeight || '75'} kg</span>
                 </div>
                 <div className="flex items-center gap-2 pt-1"><span>🟢</span> Objetivo: <b>{formData.goal || 'Tu objetivo'}</b></div>
+                <div className="flex items-center gap-2"><span>👤</span> Edad: <b>{formData.age ? `${formData.age} años` : 'No especificada'}</b></div>
                 <div className="flex items-center gap-2"><span>🏃‍♂️</span> Actividad: <b>{formData.hasActivity ? `${formData.activityType} (${formData.activityHours})` : 'Sedentario/a'}</b></div>
                 {formData.goal === 'Bajar peso y mantenerme' && (
                   <div className="flex items-center gap-2"><span>⚡</span> Método: <b className="capitalize">{formData.weightLossMethod === 'fasting' ? 'Ayuno Intermitente' : 'Método Tradicional'}</b></div>
