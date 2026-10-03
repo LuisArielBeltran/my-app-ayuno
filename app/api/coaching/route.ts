@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI } from '@google/generative-ai';
 
 // Inicializar el SDK oficial de Google Gen AI
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
