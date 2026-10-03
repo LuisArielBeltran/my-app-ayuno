@@ -89,15 +89,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // --- CONSULTAR EL TIPO DE DIETA DEL USUARIO DESDE LA BD ---
-    // Buscamos en user_metrics vinculado a la tabla users por email
+    // --- CONSULTAR EL TIPO DE DIETA DEL USUARIO DESDE LA BD (CORREGIDO) ---
     const dietResult = await pool.query(`
-      UM.diet_type FROM user_metrics UM
+      SELECT UM.diet_type FROM user_metrics UM
       JOIN users U ON UM.user_id = U.id
       WHERE U.email = $1;
     `, [email]).catch(() => null);
 
-    // Fallback por si la consulta directa falla o el usuario aún no tiene métricas guardadas
     let userDietType = 'omnivore';
     if (dietResult && dietResult.rows.length > 0 && dietResult.rows[0].diet_type) {
       userDietType = dietResult.rows[0].diet_type.toLowerCase();
@@ -120,7 +118,6 @@ export async function POST(req: NextRequest) {
       `
     });
 
-    // Construcción del contexto dinámico (Inyectando comidas y chat previo)
     let finalPromptText = userText;
     let contextString = "";
 
