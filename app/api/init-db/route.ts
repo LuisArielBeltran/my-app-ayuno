@@ -20,13 +20,14 @@ export async function GET() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone TEXT DEFAULT 'UTC';
     `);
 
-    // 2. Tabla de Métricas del Usuario (Ampliada con perfiles de dieta, tracks, método de peso, horarios y actividad)
+    // 2. Tabla de Métricas del Usuario (Ampliada con edad, perfiles de dieta, tracks, método de peso, horarios y actividad)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_metrics (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE UNIQUE,
         goal VARCHAR(255),
         gender VARCHAR(50),
+        age VARCHAR(50),
         height_cm NUMERIC,
         weight_kg NUMERIC,
         target_weight_kg NUMERIC,
@@ -38,6 +39,7 @@ export async function GET() {
         speed_level VARCHAR(50) DEFAULT 'normal',
         has_activity BOOLEAN,
         activity_type VARCHAR(100),
+        activity_other VARCHAR(255),
         activity_hours VARCHAR(50),
         updated_at TIMESTAMP DEFAULT NOW()
       );
@@ -45,6 +47,7 @@ export async function GET() {
 
     // Asegurar compatibilidad y columnas nuevas si la tabla ya existía
     await pool.query(`
+      ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS age VARCHAR(50);
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS diet_type VARCHAR(50) DEFAULT 'omnivore';
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS track_type VARCHAR(50) DEFAULT 'fat_loss';
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS weight_loss_method VARCHAR(50) DEFAULT 'fasting';
@@ -53,6 +56,7 @@ export async function GET() {
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS speed_level VARCHAR(50) DEFAULT 'normal';
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS has_activity BOOLEAN;
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS activity_type VARCHAR(100);
+      ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS activity_other VARCHAR(255);
       ALTER TABLE user_metrics ADD COLUMN IF NOT EXISTS activity_hours VARCHAR(50);
     `);
 
@@ -171,7 +175,7 @@ export async function GET() {
       ('Caldo de Huesos Reparador', 'Romper Ayuno', '🍲', 15, 95, 12, 2, 4, '500ml de caldo de huesos concentrado, una pizca de sal marina, jengibre fresco rallado.', 'Calentar el caldo de huesos a fuego lento en una olla. Añadir el jengibre rallado para estimular la digestión de forma suave. Consumir tibio.'),
       ('Yogur Griego con Nueces y Canela', 'Romper Ayuno', '🥣', 5, 210, 20, 12, 8, '1 taza de yogur griego entero sin azúcar, 15g de nueces picadas, pizca de canela en polvo.', 'Colocar el yogur en un bol, esparcir las nueces por encima y terminar con una pizca generosa de canela para regular la glucosa.'),
       ('Batido Verde de Transición', 'Romper Ayuno', '🥤', 7, 150, 8, 18, 3, '1 puñado de espinaca, 1/2 pepino, jugo de medio limón, 1 cucharadita de semillas de chía, agua.', 'Licuar todos los ingredientes hasta obtener una mezcla homogénea y ligera que prepare el sistema digestivo sin picos de insulina.'),
-      ('Huevos Revueltos con Tomates Cherry', 'Romper Ayuno', '🍅', 10, 280, 16, 6, 20, '2 huevos, 5 tomates cherry cortados a la mitad, aceite de coco, albahaca fresca.', 'Saltear los tomates cherry en aceite de coco hasta que estén tiernos. Agregar los huevos batidos y remover suavemente hasta lograr una textura cremosa.'),
+      ('Huevos Revueltos con Tomates Cherry', 'Romper Ayuno', '🍅', 10, 280, 16, 6, 20, '2 huevos, 5 tomates cherry cortados a la mitad, aceite de coco, albahaca fresca.', 'Saltear los tomates cherry en aceite de coco hasta que estén tiernos. Añadir los huevos batidos y remover suavemente hasta lograr una textura cremosa.'),
       ('Pudín de Chía Proteico', 'Romper Ayuno', '🌰', 5, 190, 10, 15, 9, '3 cucharadas de semillas de chía, 1 taza de leche de almendras sin azúcar, esencia de vainilla.', 'Mezclar la chía con la leche vegetal desde la noche anterior. Servir frío con unas gotas de vainilla para un despertar digestivo ideal.'),
       ('Pollo al Horno con Brócoli y Oliva', 'Comida Principal', '🥗', 25, 420, 38, 10, 14, '1 pechuga de pollo, 1 taza de brócoli en floretes, 1 cucharada de aceite de oliva, ajo en polvo.', 'Marinar el pollo con especias y hornear a 180°C durante 20 minutos junto con el brócoli previamente rociado con aceite de oliva y sal.'),
       ('Salmón a la Plancha con Espárragos', 'Comida Principal', '🐟', 18, 480, 34, 6, 28, '1 filete de salmón, 1 atado de espárragos frescos, jugo de limón, aceite de oliva.', 'Sellar el salmón a la plancha con la piel hacia abajo hasta que quede crujiente. Saltear los espárragos en la misma sartén con un toque de limón.'),
