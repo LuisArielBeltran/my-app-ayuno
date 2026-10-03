@@ -4,14 +4,17 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const { plan, email } = await req.json();
-    const baseUrl = process.env.NEXTAUTH_URL || 'https://my-app-ayuno.vercel.app';
+    
+    // Construcción segura de la URL base para evitar errores de despliegue en Vercel
+    const baseUrl = process.env.NEXTAUTH_URL || 
+                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://my-app-ayuno.vercel.app');
 
     // Validación de seguridad para asegurarnos de que el email y el plan existan
     if (!email || !plan) {
       return NextResponse.json({ success: false, error: 'Email y suscripción requeridos' }, { status: 400 });
     }
 
-    // MODO SIMULACIÓN: Si aún no hay token de Mercado Pago, redirigimos directamente al dashboard para pruebas
+    // MODO SIMULACIÓN: Si aún no hay token de Mercado Pago, redirigimos al dashboard para pruebas
     if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.trim() === '') {
       return NextResponse.json({ 
         success: true, 
@@ -19,14 +22,18 @@ export async function POST(req: Request) {
       });
     }
 
-    // Definir precios según el plan seleccionado
+    // Definir precios soportando tanto los IDs cortos como los largos del frontend ('1week', '4weeks', '12weeks')
     const prices: { [key: string]: { title: string; price: number } } = {
       '1': { title: 'Plan Ayuno - 1 Semana', price: 6590 },
+      '1week': { title: 'Plan Ayuno - 1 Semana', price: 6590 },
       '4': { title: 'Plan Ayuno - 4 Semanas', price: 10392 },
+      '4weeks': { title: 'Plan Ayuno - 4 Semanas', price: 10392 },
       '12': { title: 'Plan Ayuno - 12 Semanas', price: 21592 },
+      '12weeks': { title: 'Plan Ayuno - 12 Semanas', price: 21592 },
     };
 
-    const selected = prices[plan] || prices['12'];
+    // Si el plan no coincide, usamos el plan de 4 semanas por defecto de forma segura
+    const selected = prices[plan] || prices['4weeks'];
 
     // Petición oficial a Mercado Pago (incluyendo metadatos con el email para rastrear la compra)
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
