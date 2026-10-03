@@ -168,6 +168,7 @@ function DashboardContent() {
   const isSuccess = searchParams.get('success');
 
   const [userEmail, setUserEmail] = useState<string>('usuario@ayuno.com');
+  const [showGoalModal, setShowGoalModal] = useState(false);
 
   useEffect(() => {
     const paramEmail = searchParams.get('email');
@@ -550,7 +551,7 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Banner de Objetivo Personalizado */}
+      {/* Banner de Objetivo Personalizado con Botón Cambiar Meta */}
       <div className={`flex flex-wrap items-center justify-between border p-4 rounded-2xl gap-2 ${goalInfo.color}`}>
         <div className="flex items-center gap-2">
           <span className="text-xl">🎯</span>
@@ -559,7 +560,7 @@ function DashboardContent() {
             <span className="text-sm font-black">{goalInfo.label}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {hasActivity && (
             <span className="bg-white/80 px-3 py-1.5 rounded-xl border text-xs font-bold text-gray-800">
               🏃‍♂️ {activityType}
@@ -568,6 +569,12 @@ function DashboardContent() {
           <span className="bg-white px-3 py-1.5 rounded-xl border text-xs font-bold capitalize">
             🥗 Dieta: {dietType}
           </span>
+          <button
+            onClick={() => setShowGoalModal(true)}
+            className="bg-gray-900 hover:bg-black text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm"
+          >
+            CAMBIAR META
+          </button>
         </div>
       </div>
 
@@ -776,6 +783,35 @@ function DashboardContent() {
       <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl text-center">
         <p className="text-sm text-emerald-600 font-semibold">Programa Especialista Adaptativo Activo ✓</p>
       </div>
+
+      {/* Pop-up / Modal para Cambiar Meta */}
+      {showGoalModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl border border-gray-100 space-y-4 text-center">
+            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mx-auto">
+              🎯
+            </div>
+            <h3 className="text-lg font-black text-gray-900">¿Desea cambiar su meta?</h3>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Podrá seleccionar bajar de peso, subir masa muscular, ajustar horarios y personalizar su plan desde cero.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowGoalModal(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl text-xs transition-all"
+              >
+                Salir
+              </button>
+              <button
+                onClick={() => router.push(`/onboarding?email=${encodeURIComponent(userEmail)}`)}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs transition-all shadow-md"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Renderizado del Coach IA integrado pasándole las comidas */}
       <AICoachChat email={userEmail} meals={mealsText} />
