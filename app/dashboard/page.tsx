@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import RecipeGuide from '@/components/RecipeGuide';
 import FoodAnalyzer from '@/components/FoodAnalyzer';
 import BadgesSection from '@/components/BadgesSection';
 import PushNotificationBanner from '@/components/PushNotificationBanner';
@@ -167,7 +166,7 @@ function DashboardContent() {
   const [isFasting, setIsFasting] = useState(false);
   const [fastingSeconds, setFastingSeconds] = useState(0);
   const [targetHours, setTargetHours] = useState<number>(16);
-  const [waterGlasses, setWaterGlasses] = useState(3);
+  const [waterGlasses, setWaterGlasses] = useState(0); // Iniciado en 0
   const [waterTarget, setWaterTarget] = useState<number>(8);
   const [fastingStreak, setFastingStreak] = useState(3);
 
@@ -184,10 +183,6 @@ function DashboardContent() {
     snack: false,
     dinner: false
   });
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [foodResults, setFoodResults] = useState<any[]>([]);
-  const [loadingFood, setLoadingFood] = useState(false);
 
   const [currentTip, setCurrentTip] = useState<{phase: string, title: string, content: string} | null>(null);
 
@@ -321,29 +316,6 @@ function DashboardContent() {
       setCurrentTip({ phase: "Fase Activa", title: "Optimización Metabólica en Curso", content: "Mantén una hidratación constante y respeta tus ventanas biológicas." });
     }
   }, [fastingSeconds, targetHours, isFasting, userGoal, dietType, weightLossMethod, hasActivity, activityType]);
-
-  useEffect(() => {
-    const delayDebounce = setTimeout(async () => {
-      if (!searchTerm.trim()) {
-        setFoodResults([]);
-        setLoadingFood(false);
-        return;
-      }
-      setLoadingFood(true);
-      try {
-        const res = await fetch(`/api/food/search?q=${encodeURIComponent(searchTerm)}`);
-        const data = await res.json();
-        if (data.success) {
-          setFoodResults(data.results);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingFood(false);
-      }
-    }, 300);
-    return () => clearTimeout(delayDebounce);
-  }, [searchTerm]);
 
   useEffect(() => {
     if (weightHistory.length > 0 && targetWeight !== null) {
@@ -718,51 +690,7 @@ function DashboardContent() {
 
       <BadgesSection email={userEmail} />
 
-      <div className="bg-gray-50 border border-gray-200 p-6 rounded-2xl">
-        <h3 className="text-xl font-bold text-gray-900 mb-1">🔍 Validador de Alimentos</h3>
-        <p className="text-sm text-gray-500 mb-4">Escribe cualquier producto (ej: tofu, tempeh, mate, café con leche) para analizar su compatibilidad con tu dieta.</p>
-        
-        <input 
-          type="text"
-          placeholder="Busca un alimento, bebida o alternativa proteica..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full p-4 border-2 border-gray-200 rounded-xl text-base focus:border-indigo-600 outline-none bg-white transition-all mb-4"
-        />
-
-        {loadingFood ? (
-          <p className="text-center text-sm text-gray-400 py-4">Buscando en la base de datos...</p>
-        ) : (
-          <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-            {foodResults.length === 0 && searchTerm.trim() !== '' ? (
-              <p className="text-center text-sm text-gray-400 py-4">No se encontró ese producto. ¡Prueba con otro término!</p>
-            ) : foodResults.length === 0 ? null : (
-              foodResults.map((item) => (
-                <div key={item.id} className="bg-white p-4 rounded-xl border border-gray-200 flex items-start justify-between gap-4 shadow-sm">
-                  <div>
-                    <h4 className="font-bold text-gray-900">{item.food_name}</h4>
-                    <p className="text-xs text-gray-600 mt-1">{item.explanation}</p>
-                  </div>
-                  <div>
-                    {item.breaks_fast ? (
-                      <span className="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
-                        ❌ Rompe ayuno
-                      </span>
-                    ) : (
-                      <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
-                        ✅ Permitido
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-
       <FoodAnalyzer />
-      <RecipeGuide />
 
       <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl text-center">
         <p className="text-sm text-emerald-600 font-semibold">Programa Especialista Adaptativo Activo ✓</p>
