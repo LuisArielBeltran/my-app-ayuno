@@ -44,7 +44,16 @@ function AICoachChat({ email }: { email: string }) {
       });
 
       const data = await res.json();
-      const assistantReply = data.text || data.reply || "¡Aquí estoy para ayudarte!";
+      
+      // Si hay un error de código o conexión, que te lo muestre en pantalla para saber qué pasa
+      if (!data.success && data.error) {
+        setMessages((prev) => [...prev, { role: 'assistant', text: `⚠️ Error interno: ${data.error}` }]);
+        setLoading(false);
+        return;
+      }
+
+      // Si todo va bien (o si alcanzó un límite), muestra la respuesta real o el aviso de límite
+      const assistantReply = data.reply || data.text || "¡Aquí estoy para ayudarte!";
       
       setMessages((prev) => [...prev, { role: 'assistant', text: assistantReply }]);
       setLoading(false);
