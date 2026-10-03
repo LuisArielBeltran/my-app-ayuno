@@ -33,6 +33,14 @@ function AICoachChat({ email }: { email: string }) {
 
     const userText = inputMessage;
     setInputMessage('');
+    
+    // Recopilamos el historial para que la IA recuerde de qué estamos hablando
+    // Ignoramos el mensaje de saludo automático (índice 0) para ahorrar tokens
+    const historyToSend = messages.slice(1).map(msg => ({
+      role: msg.role,
+      text: msg.text
+    }));
+
     setMessages((prev) => [...prev, { role: 'user', text: userText }]);
     setLoading(true);
 
@@ -40,7 +48,11 @@ function AICoachChat({ email }: { email: string }) {
       const res = await fetch('/api/ai/analyze-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userText, email })
+        body: JSON.stringify({ 
+          prompt: userText, 
+          email,
+          chatHistory: historyToSend // Enviamos la memoria al backend
+        })
       });
 
       const data = await res.json();
@@ -186,11 +198,15 @@ function DashboardContent() {
   const [hasActivity, setHasActivity] = useState(false);
   const [activityType, setActivityType] = useState('');
 
-  const [mealsLogged, setMealsLogged] = useState({
-    breakfast: false,
-    lunch: false,
-    snack: false,
-    dinner: false
+  // Nuevo estado para el registro de comidas con texto
+  const [mealsText, setMealsText] = useState({
+    breakfast: '',
+    snack1: '',
+    lunch: '',
+    snack2: '',
+    merienda: '',
+    snack3: '',
+    dinner: ''
   });
 
   const [currentTip, setCurrentTip] = useState<{phase: string, title: string, content: string} | null>(null);
@@ -595,29 +611,37 @@ function DashboardContent() {
                 {userGoal.includes('masa muscular') ? '💪 Control de Ingestas y Volumen' : '🥗 Control Diario de Comidas'}
               </span>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Registro de Ingestas Hoy</h3>
-              <p className="text-xs text-gray-600 mb-3">Marca tus comidas principales para asegurar que cumples con tus requerimientos diarios.</p>
+              <p className="text-xs text-gray-600 mb-4">Marca y describe tus comidas para asegurar tus requerimientos y darle precisión a tu Coach IA. <span className="font-bold">Solo llena las que hayas consumido.</span></p>
               
-              <div className="space-y-2 mb-4">
+              <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                 {[
-                  { key: 'breakfast', label: '🍳 Desayuno / Primera Comida' },
-                  { key: 'lunch', label: '🥗 Almuerzo Principal' },
-                  { key: 'snack', label: '🥜 Colación / Refuerzo Proteico' },
-                  { key: 'dinner', label: '🍲 Cena Reparadora' }
+                  { key: 'breakfast', label: '🍳 Desayuno', placeholder: 'Ej. 2 huevos y café' },
+                  { key: 'snack1', label: '🥜 Colación / Refuerzo', placeholder: 'Ej. Puñado de almendras' },
+                  { key: 'lunch', label: '🥗 Almuerzo Principal', placeholder: 'Ej. Pechuga de pollo y ensalada' },
+                  { key: 'snack2', label: '🥜 Colación / Refuerzo', placeholder: 'Ej. Yogur griego' },
+                  { key: 'merienda', label: '☕ Merienda', placeholder: 'Ej. Té verde y tostada' },
+                  { key: 'snack3', label: '🥜 Colación / Refuerzo', placeholder: 'Ej. Batido de proteína' },
+                  { key: 'dinner', label: '🍲 Cena Reparadora', placeholder: 'Ej. Salmón al horno con vegetales' }
                 ].map((meal) => (
-                  <label key={meal.key} className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-indigo-100 cursor-pointer hover:bg-indigo-50 transition-all">
-                    <span className="text-xs font-bold text-gray-700">{meal.label}</span>
+                  <div key={meal.key} className="bg-white p-3 rounded-xl border border-indigo-100 transition-all focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 shadow-sm">
+                    <label className="text-xs font-bold text-gray-700 block mb-1">{meal.label}</label>
                     <input 
-                      type="checkbox"
-                      checked={(mealsLogged as any)[meal.key]}
-                      onChange={(e) => setMealsLogged({ ...mealsLogged, [meal.key]: e.target.checked })}
-                      className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                      type="text"
+                      placeholder={meal.placeholder}
+                      value={(mealsText as any)[meal.key]}
+                      onChange={(e) => setMealsText({ ...mealsText, [meal.key]: e.target.value })}
+                      className="w-full text-sm text-gray-800 bg-transparent border-none outline-none placeholder-gray-300"
                     />
-                  </label>
+                  </div>
                 ))}
               </div>
             </div>
-            <div className="bg-white/80 p-2.5 rounded-xl border border-indigo-200 text-center text-xs font-bold text-indigo-900">
-              {Object.values(mealsLogged).filter(Boolean).length} de 4 comidas registradas hoy
+            
+            <div className="bg-white/80 p-3 rounded-xl border border-indigo-200 text-center text-sm font-bold text-indigo-900 shadow-sm flex justify-center items-center gap-2">
+              <span className="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
+                {Object.values(mealsText).filter(text => text.trim().length > 0).length}
+              </span> 
+              Comidas descritas hoy
             </div>
           </div>
         )}
