@@ -3,7 +3,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import pool from "@/lib/db";
 import bcrypt from "bcryptjs";
 
-export const authOptions = {
+// Quitamos el 'export' de aquí para que sea solo una constante local
+const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
