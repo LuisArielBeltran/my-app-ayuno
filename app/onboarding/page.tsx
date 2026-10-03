@@ -469,7 +469,7 @@ export default function OnboardingPage() {
                 <input type="email" placeholder="tucorreo@gmail.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full p-4 border-2 border-gray-200 rounded-xl text-base focus:border-indigo-600 outline-none shadow-sm transition-all" />
               </div>
 
-              <button startAnalysis disabled={!formData.email || !formData.email.includes('@')} onClick={startAnalysis} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-sm uppercase tracking-wider py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg">
+              <button disabled={!formData.email || !formData.email.includes('@')} onClick={startAnalysis} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-sm uppercase tracking-wider py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg">
                 ¡VAMOS POR TU OBJETIVO! 🚀
               </button>
             </div>
@@ -480,5 +480,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-// Forzar actualización de onboarding
