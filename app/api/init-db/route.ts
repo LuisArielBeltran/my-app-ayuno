@@ -121,7 +121,20 @@ export async function GET() {
       );
     `);
 
-    // 8. Tablas de Gamificación e Insignias
+    // 8. NUEVA: Tabla de Control de Consumo Diario de IA
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_ai_usage (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        usage_date DATE DEFAULT CURRENT_DATE,
+        text_queries_count INT DEFAULT 0,
+        image_queries_count INT DEFAULT 0,
+        plan_type VARCHAR(50) DEFAULT 'basic',
+        UNIQUE(email, usage_date)
+      );
+    `);
+
+    // 9. Tablas de Gamificación e Insignias
     await pool.query(`
       CREATE TABLE IF NOT EXISTS badges (
         id SERIAL PRIMARY KEY,
@@ -154,7 +167,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: '¡Base de datos optimizada y limpia! Tablas innecesarias removidas correctamente.' 
+      message: '¡Base de datos optimizada y limpia con tabla de consumo de IA incorporada!' 
     });
   } catch (error: any) {
     console.error('Error inicializando BD:', error);
