@@ -480,3 +480,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+// Forzar actualización de onboarding
