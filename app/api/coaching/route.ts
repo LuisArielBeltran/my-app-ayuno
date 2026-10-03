@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Inicializar el SDK oficial de Google Gen AI
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Inicializar el SDK oficial con la clave de API
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,18 +24,22 @@ export async function POST(req: NextRequest) {
       Responde de forma concisa (máximo 3 o 4 párrafos cortos), dando consejos prácticos sobre hidratación, manejo de la ansiedad, porciones o cómo romper el ayuno correctamente.
     `;
 
-    // Llamada al modelo Gemini 1.5 Flash (ideal para texto rápido y económico)
-    const response = await ai.models.generateContent({
+    // Configurar el modelo incluyendo las instrucciones del sistema
+    const model = genAI.getGenerativeModel({
       model: 'gemini-1.5-flash',
-      contents: message,
-      config: {
-        systemInstruction: systemInstruction,
+      systemInstruction: systemInstruction,
+    });
+
+    // Generar la respuesta
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: message }] }],
+      generationConfig: {
         maxOutputTokens: 300,
         temperature: 0.7,
       }
     });
 
-    const reply = response.text || '¡Hola! Estoy aquí contigo. Mantén tu enfoque y recuerda que tú tienes el control.';
+    const reply = result.response.text() || '¡Hola! Estoy aquí contigo. Mantén tu enfoque y recuerda que tú tienes el control.';
 
     return NextResponse.json({ success: true, reply });
   } catch (error: any) {
