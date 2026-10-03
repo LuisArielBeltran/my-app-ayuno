@@ -1,5 +1,5 @@
 {
-  "name": "mi-app-ayuno",
+  "name": "my-app-ayuno",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint"
   },
-    "dependencies": {
+  "dependencies": {
     "react": "^18",
     "react-dom": "^18",
     "next": "14.2.35",
@@ -18,9 +18,9 @@
     "@ducanh2912/next-pwa": "^10.2.9",
     "resend": "^3.2.0",
     "openai": "^4.0.0",
-    "web-push": "^3.6.6"
+    "web-push": "^3.6.6",
+    "@google/genai": "^0.1.1"
   },
-
   "devDependencies": {
     "typescript": "^5",
     "@types/node": "^20",
@@ -36,5 +36,3 @@
     "eslint-config-next": "14.2.35"
   }
 }
-
-
