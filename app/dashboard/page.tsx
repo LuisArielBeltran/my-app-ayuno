@@ -34,7 +34,6 @@ function AICoachChat({ email, meals }: { email: string; meals: any }) {
     const userText = inputMessage;
     setInputMessage('');
     
-    // Recopilamos el historial para que la IA recuerde de qué estamos hablando
     const historyToSend = messages.slice(1).map(msg => ({
       role: msg.role,
       text: msg.text
@@ -51,7 +50,7 @@ function AICoachChat({ email, meals }: { email: string; meals: any }) {
           prompt: userText, 
           email,
           chatHistory: historyToSend,
-          currentMeals: meals // Enviamos las comidas actuales para que la IA las analice y aconseje
+          currentMeals: meals 
         })
       });
 
@@ -64,7 +63,6 @@ function AICoachChat({ email, meals }: { email: string; meals: any }) {
       }
 
       const assistantReply = data.reply || data.text || "¡Aquí estoy para ayudarte!";
-      
       setMessages((prev) => [...prev, { role: 'assistant', text: assistantReply }]);
       setLoading(false);
 
@@ -207,7 +205,6 @@ function DashboardContent() {
     dinner: ''
   });
 
-  // Función para guardar automáticamente las comidas en el servidor
   const handleMealChange = async (key: string, value: string) => {
     const updatedMeals = { ...mealsText, [key]: value };
     setMealsText(updatedMeals);
@@ -233,22 +230,28 @@ function DashboardContent() {
   const [submittingWeight, setSubmittingWeight] = useState(false);
   const [goalReached, setGoalReached] = useState(false);
 
+  // Cargar datos iniciales desde Railway usando la ruta correcta `/api/fasting`
   useEffect(() => {
     if (!userEmail || userEmail === 'usuario@ayuno.com') return;
 
     const fetchInitialData = async () => {
       try {
-        const fastingRes = await fetch(`/api/fasting/state?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
+        const fastingRes = await fetch(`/api/fasting?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
         const fastingData = await fastingRes.json();
-        if (fastingData.success && fastingData.state && fastingData.state.is_fasting && fastingData.state.start_time) {
+        
+        // Soportamos tanto 'state' como un objeto directo devuelto por la API
+        const fastingState = fastingData.state || fastingData;
+        if (fastingData.success && fastingState && fastingState.is_fasting && fastingState.start_time) {
           setIsFasting(true);
-          if (fastingData.state.target_hours) {
-            setTargetHours(fastingData.state.target_hours);
+          if (fastingState.target_hours) {
+            setTargetHours(fastingState.target_hours);
           }
-          const start = new Date(fastingData.state.start_time).getTime();
+          const start = new Date(fastingState.start_time).getTime();
           const now = new Date().getTime();
           const elapsedSeconds = Math.floor((now - start) / 1000);
           setFastingSeconds(elapsedSeconds > 0 ? elapsedSeconds : 0);
+        } else if (fastingData.success && fastingState && fastingState.target_hours) {
+          setTargetHours(fastingState.target_hours);
         }
 
         const weightRes = await fetch(`/api/weight?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
@@ -276,7 +279,6 @@ function DashboardContent() {
           if (m.activity_type) setActivityType(m.activity_type);
         }
 
-        // Cargar las comidas registradas del día de hoy
         const mealsRes = await fetch(`/api/meals?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
         const mealsData = await mealsRes.json();
         if (mealsData.success && mealsData.meals) {
@@ -398,11 +400,12 @@ function DashboardContent() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Función para iniciar/detener ayuno apuntando a la ruta correcta `/api/fasting`
   const toggleFasting = async () => {
     const newFastingState = !isFasting;
     const startTimeNow = newFastingState ? new Date().toISOString() : null;
     try {
-      const res = await fetch('/api/fasting/state', {
+      const res = await fetch('/api/fasting', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -614,7 +617,21 @@ function DashboardContent() {
                   <label className="block text-xs font-bold text-indigo-700 uppercase mb-1">Elige tu plan de hoy:</label>
                   <select 
                     value={targetHours}
-                    onChange={(e) => setTargetHours(Number(e.target.value))}
+                    onChange={async (e) => {
+                      const newTarget = Number(e.target.value);
+                      setTargetHours(newTarget);
+                      if (userEmail && userEmail !== 'usuario@ayuno.com') {
+                        try {
+                          await fetch('/api/fasting', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: userEmail, is_fasting: false, target_hours: newTarget })
+                          });
+                        } catch (err) {
+                          console.error('Error al guardar horas de ayuno:', err);
+                        }
+                      }
+                    }}
                     className="w-full p-3 border border-indigo-200 rounded-xl text-sm focus:border-indigo-600 outline-none bg-white text-gray-800 shadow-sm font-medium"
                   >
                     <option value={12}>12/12 - Descanso Digestivo (12h)</option>
