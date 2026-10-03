@@ -19,7 +19,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-xl md:text-2xl font-bold text-gray-800 pt-2">
-            Domina PPPP el Ayuno Intermitente entre otros con Ciencia y Bienestar
+            Domina el Ayuno Intermitente entre otros con Ciencia y Bienestar
           </p>
 
           <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
