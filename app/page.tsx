@@ -1,8 +1,20 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // 1. Verificamos si el usuario ya tiene una sesión activa
+  const session = await getServerSession(authOptions);
+
+  // 2. Si está logueado, lo redirigimos directo al dashboard con su correo
+  if (session && session.user?.email) {
+    redirect(`/dashboard?email=${encodeURIComponent(session.user.email)}`);
+  }
+
+  // 3. Si no está logueado, se muestra la Landing Page normalmente
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col justify-between py-10 px-4">
       <div className="max-w-5xl mx-auto w-full space-y-10 my-auto text-center">
@@ -84,4 +96,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
