@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Falta el email del usuario para validar consumo' }, { status: 400 });
     }
 
-    const userText = prompt || '¿Esta comida rompe mi ayuno y qué componentes tiene?';
+    const userText = prompt || 'Analiza este plato detallando sus componentes nutricionales, proteínas, hidratos y calorías acorde a mi meta actual.';
     const isImageQuery = !!imageBase64;
 
     if (!isImageQuery && userText) {
@@ -89,37 +89,55 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // --- CONSULTAR EL TIPO DE DIETA DEL USUARIO DESDE LA BD (CORREGIDO) ---
-    const dietResult = await pool.query(`
-      SELECT UM.diet_type FROM user_metrics UM
+    // --- CONSULTAR METAS, DIETA Y TIPO DE ENFOQUE DEL USUARIO DESDE LA BD ---
+    const metricsResult = await pool.query(`
+      SELECT UM.goal, UM.track_type, UM.diet_type FROM user_metrics UM
       JOIN users U ON UM.user_id = U.id
       WHERE U.email = $1;
     `, [email]).catch(() => null);
 
+    let userGoal = 'Bajar peso y mantenerme';
+    let trackType = 'fat_loss';
     let userDietType = 'omnivore';
-    if (dietResult && dietResult.rows.length > 0 && dietResult.rows[0].diet_type) {
-      userDietType = dietResult.rows[0].diet_type.toLowerCase();
+
+    if (metricsResult && metricsResult.rows.length > 0) {
+      const m = metricsResult.rows[0];
+      if (m.goal) userGoal = m.goal;
+      if (m.track_type) trackType = m.track_type;
+      if (m.diet_type) userDietType = m.diet_type.toLowerCase();
     }
 
-    // --- LLAMADA A GEMINI CON CONTEXTO Y PERFIL DIETÉTICO ADAPTATIVO ---
+    // Obtener la hora actual exacta para contextualizar el análisis
+    const horaActual = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+
+    // --- LLAMADA A GEMINI CON CONTEXTO Y PERFIL ADAPTATIVO ESTRICTO ---
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3-flash-preview',
       systemInstruction: `
-        Eres el coach experto en ayuno intermitente, nutrición clínica y adaptativa de la aplicación "TIENES EL CONTROL".
-        Tu tono es motivador, empático y firme. 
+        Eres el coach experto en ayuno intermitente, nutrición clínica, deportiva y adaptativa de la aplicación "TIENES EL CONTROL".
+        Tu tono es motivador, empático, profesional y analítico.
 
-        PERFIL NUTRICIONAL ESTRICTO DEL USUARIO ACTUAL: ${userDietType.toUpperCase()}
-        - Si es OMNÍVORO: Puede consumir cualquier fuente de proteína animal y vegetal de manera equilibrada.
-        - Si es VEGETARIANO: Excluye absolutamente carnes, pescados y mariscos. Consume huevos, lácteos y derivados vegetales. NUNCA recomiendes carnes, aves ni caldos de origen animal.
-        - Si es VEGANO: Excluye 100% cualquier producto de origen animal (carne, pescado, huevos, lácteos, miel). Todas tus recomendaciones de proteínas, calorías y micronutrientes deben basarse estrictamente en fuentes vegetales (legumbres, tofu, tempeh, frutos secos, semillas).
+        CONTEXTO TEMPORAL ACTUAL: Son las ${horaActual} horas.
+        
+        PERFIL NUTRICIONAL Y META DEL USUARIO:
+        - Meta Principal: "${userGoal}"
+        - Enfoque (track_type): "${trackType}"
+        - Perfil Dietético: "${userDietType.toUpperCase()}"
 
-        Si el usuario te pide una receta, plan de comidas o menú, responde de forma estructurada y completa acorde a su perfil dietético. 
-        NUNCA dejes oraciones a la mitad ni ideas incompletas. Utiliza el registro de comidas del día y el historial para ofrecerle respuestas y recomendaciones ultra personalizadas y seguras para su salud.
+        REGLAS ESTRICTAS PARA EL ANÁLISIS DE PLATOS Y FOTOS:
+        1. ADAPTABILIDAD AL PLAN: 
+           - Si el usuario está en un plan de ganancia muscular / volumen limpio (o si su meta incluye "masa muscular"), NUNCA digas que la comida "rompe el ayuno" ni critiques la comida por tener hidratos o calorías. Su objetivo es nutrirse y crecer muscularmente. Valora el aporte proteico, los carbohidratos complejos y la calidad calórica para su volumen.
+           - Si el usuario está en un plan de pérdida de grasa con ayuno, evalúa si rompe el ayuno respetando la hora actual y su ventana.
+        2. PERFIL DIETÉTICO:
+           - OMNÍVORO: Puede consumir fuentes de proteína animal y vegetal de manera equilibrada.
+           - VEGETARIANO: Excluye carnes, pescados y mariscos. Consume huevos, lácteos y vegetales.
+           - VEGANO: Excluye 100% productos de origen animal.
+        3. Estructura tus respuestas de forma clara, detallando componentes, aportes nutricionales y consejos de tu parte como coach. NUNCA dejes ideas a la mitad.
       `
     });
 
     let finalPromptText = userText;
-    let contextString = "";
+    let contextString = `[CONTEXTO DEL SISTEMA]\nHora actual: ${horaActual}\nMeta del usuario: ${userGoal} (Enfoque: ${trackType})\n\n`;
 
     if (currentMeals) {
       const comidasRegistradas = Object.entries(currentMeals)
