@@ -57,7 +57,7 @@ function AICoachChat({ email, meals }: { email: string; meals: any }) {
       const data = await res.json();
       
       if (!data.success && data.error) {
-        setMessages((prev) => [...prev, { role: 'assistant', text: `⚠️ Error interno: ${data.error}` }]);
+        setMessages((prev) => [...prev, { role: 'assistant', text: `⚠️️ Error interno: ${data.error}` }]);
         setLoading(false);
         return;
       }
@@ -168,7 +168,11 @@ function DashboardContent() {
   const isSuccess = searchParams.get('success');
 
   const [userEmail, setUserEmail] = useState<string>('usuario@ayuno.com');
-  const [showGoalModal, setShowGoalModal] = useState(false);
+  
+  // Estados para el flujo interactivo de cambio de meta
+  const [goalModalStep, setGoalModalStep] = useState<'none' | 'ask' | 'select' | 'confirm'>('none');
+  const [pendingGoal, setPendingGoal] = useState<string>('');
+  const [updatingGoal, setUpdatingGoal] = useState(false);
 
   useEffect(() => {
     const paramEmail = searchParams.get('email');
@@ -194,6 +198,14 @@ function DashboardContent() {
   const [weightLossMethod, setWeightLossMethod] = useState('fasting');
   const [hasActivity, setHasActivity] = useState(false);
   const [activityType, setActivityType] = useState('');
+
+  // Lista completa de metas disponibles en la aplicación
+  const availableGoals = [
+    'Bajar peso y mantenerme',
+    'Ganar masa muscular (Volumen limpio)',
+    'Retrasar el envejecimiento',
+    'Desintoxicación celular'
+  ];
 
   // Estado para el registro de comidas con texto
   const [mealsText, setMealsText] = useState({
@@ -231,7 +243,7 @@ function DashboardContent() {
   const [submittingWeight, setSubmittingWeight] = useState(false);
   const [goalReached, setGoalReached] = useState(false);
 
-  // Cargar datos iniciales desde Railway usando la ruta correcta `/api/fasting`
+  // Cargar datos iniciales desde Railway
   useEffect(() => {
     if (!userEmail || userEmail === 'usuario@ayuno.com') return;
 
@@ -240,7 +252,6 @@ function DashboardContent() {
         const fastingRes = await fetch(`/api/fasting?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
         const fastingData = await fastingRes.json();
         
-        // Soportamos tanto 'state' como un objeto directo devuelto por la API
         const fastingState = fastingData.state || fastingData;
         if (fastingData.success && fastingState && fastingState.is_fasting && fastingState.start_time) {
           setIsFasting(true);
@@ -401,7 +412,6 @@ function DashboardContent() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Función para iniciar/detener ayuno apuntando a la ruta correcta `/api/fasting`
   const toggleFasting = async () => {
     const newFastingState = !isFasting;
     const startTimeNow = newFastingState ? new Date().toISOString() : null;
@@ -464,6 +474,48 @@ function DashboardContent() {
       alert('Error de conexión al registrar peso: ' + err.message);
     } finally {
       setSubmittingWeight(false);
+    }
+  };
+
+  // Función para confirmar y guardar el cambio de meta en Railway
+  const handleConfirmChangeGoal = async () => {
+    setUpdatingGoal(true);
+    try {
+      let newTrackType = 'fat_loss';
+      let newMethod = 'fasting';
+      if (pendingGoal.toLowerCase().includes('masa muscular')) {
+        newTrackType = 'muscle_gain';
+        newMethod = 'traditional';
+      } else if (pendingGoal.toLowerCase().includes('envejecimiento') || pendingGoal.toLowerCase().includes('Desintoxicación')) {
+        newTrackType = 'longevity';
+        newMethod = 'fasting';
+      }
+
+      const res = await fetch('/api/metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          goal: pendingGoal,
+          track_type: newTrackType,
+          weight_loss_method: newMethod
+        })
+      });
+      const data = await res.json();
+      if (data.success || res.ok) {
+        setUserGoal(pendingGoal);
+        setTrackType(newTrackType);
+        setWeightLossMethod(newMethod);
+        setGoalModalStep('none');
+        setPendingGoal('');
+      } else {
+        alert('Error al actualizar la meta.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error de conexión al actualizar la meta.');
+    } finally {
+      setUpdatingGoal(false);
     }
   };
 
@@ -570,7 +622,7 @@ function DashboardContent() {
             🥗 Dieta: {dietType}
           </span>
           <button
-            onClick={() => setShowGoalModal(true)}
+            onClick={() => setGoalModalStep('ask')}
             className="bg-gray-900 hover:bg-black text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm"
           >
             CAMBIAR META
@@ -784,8 +836,12 @@ function DashboardContent() {
         <p className="text-sm text-emerald-600 font-semibold">Programa Especialista Adaptativo Activo ✓</p>
       </div>
 
-      {/* Pop-up / Modal para Cambiar Meta */}
-      {showGoalModal && (
+      {/* ======================================================= */}
+      {/* FLUJO MODAL INTERACTIVO DE CAMBIO DE META             */}
+      {/* ======================================================= */}
+
+      {/* PASO 1: Pop-up de consulta inicial */}
+      {goalModalStep === 'ask' && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl border border-gray-100 space-y-4 text-center">
             <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mx-auto">
@@ -793,17 +849,17 @@ function DashboardContent() {
             </div>
             <h3 className="text-lg font-black text-gray-900">¿Desea cambiar su meta?</h3>
             <p className="text-xs text-gray-600 leading-relaxed">
-              Podrá seleccionar bajar de peso, subir masa muscular, ajustar horarios y personalizar su plan desde cero.
+              Podrá seleccionar otras opciones disponibles sin necesidad de repetir todo el cuestionario desde cero.
             </p>
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => setShowGoalModal(false)}
+                onClick={() => setGoalModalStep('none')}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl text-xs transition-all"
               >
                 Salir
               </button>
               <button
-                onClick={() => router.push(`/onboarding?email=${encodeURIComponent(userEmail)}`)}
+                onClick={() => setGoalModalStep('select')}
                 className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs transition-all shadow-md"
               >
                 Continuar
@@ -813,7 +869,77 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Renderizado del Coach IA integrado pasándole las comidas */}
+      {/* PASO 2: Cuadro de selección de metas alternativas (filtrando la actual) */}
+      {goalModalStep === 'select' && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 space-y-4">
+            <div className="text-center">
+              <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-1">Mi Perfil • Selección</span>
+              <h3 className="text-lg font-black text-gray-900">¿Qué quieres lograr ahora?</h3>
+              <p className="text-xs text-gray-500 mt-1">Elige una nueva opción para tu plan personalizado:</p>
+            </div>
+
+            <div className="space-y-2.5 pt-2">
+              {availableGoals
+                .filter(goal => !userGoal.toLowerCase().includes(goal.toLowerCase().substring(0, 8)))
+                .map((goalOpt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setPendingGoal(goalOpt);
+                      setGoalModalStep('confirm');
+                    }}
+                    className="w-full text-left p-4 rounded-2xl border border-indigo-100 hover:border-indigo-600 hover:bg-indigo-50/50 text-gray-800 font-semibold text-sm transition-all shadow-sm flex items-center justify-between group"
+                  >
+                    <span>{goalOpt}</span>
+                    <span className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">➔</span>
+                  </button>
+                ))}
+            </div>
+
+            <div className="pt-2 text-center">
+              <button
+                onClick={() => setGoalModalStep('none')}
+                className="text-xs text-gray-400 hover:text-gray-600 font-bold transition-colors"
+              >
+                Cancelar y volver
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PASO 3: Anuncio de confirmación de cambio */}
+      {goalModalStep === 'confirm' && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl border border-gray-100 space-y-4 text-center">
+            <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mx-auto">
+              ⚠️
+            </div>
+            <h3 className="text-lg font-black text-gray-900">¿Desea realizar el cambio?</h3>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Su meta pasará a ser: <strong className="text-indigo-600 font-bold">"{pendingGoal}"</strong>.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setGoalModalStep('select')}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl text-xs transition-all"
+              >
+                No
+              </button>
+              <button
+                onClick={handleConfirmChangeGoal}
+                disabled={updatingGoal}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs transition-all shadow-md disabled:opacity-50"
+              >
+                {updatingGoal ? 'Actualizando...' : 'Sí'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Renderizado del Coach IA integrado */}
       <AICoachChat email={userEmail} meals={mealsText} />
 
     </div>
