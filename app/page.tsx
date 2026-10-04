@@ -3,23 +3,19 @@ export const dynamic = 'force-dynamic';
 import Link from 'next/link';
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth"; // <-- Corregido aquí
 
 export default async function LandingPage() {
-  // 1. Verificamos si el usuario ya tiene una sesión activa
   const session = await getServerSession(authOptions);
 
-  // 2. Si está logueado, lo redirigimos directo al dashboard con su correo
   if (session && session.user?.email) {
     redirect(`/dashboard?email=${encodeURIComponent(session.user.email)}`);
   }
 
-  // 3. Si no está logueado, se muestra la Landing Page normalmente
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col justify-between py-10 px-4">
       <div className="max-w-5xl mx-auto w-full space-y-10 my-auto text-center">
 
-        {/* Encabezados Principales */}
         <div className="space-y-6">
           <span className="bg-indigo-600 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-sm">
             TIENES EL CONTROL
@@ -38,7 +34,6 @@ export default async function LandingPage() {
             Controla tus ventanas de ayuno, realiza seguimiento de tu evolución de peso, hidrátate correctamente y resuelve tus dudas al instante con nuestro ayudante online virtual, es un experto en acompañamiento y recomendación.
           </p>
 
-          {/* Banner Promocional - 7 Días Gratis */}
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-5 rounded-2xl max-w-3xl mx-auto mt-6 shadow-sm">
             <p className="font-medium text-sm md:text-base">
               🎁 Tienes <strong className="font-black text-emerald-600 text-lg">7 días totalmente gratis</strong> para gozar de todos los beneficios del programa, luego te invitaremos a continuar con tu programa y te ayudaremos para que alcances todos tus objetivos.
@@ -46,7 +41,6 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Botones de Acción */}
         <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
           <Link href="/onboarding" className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-lg px-8 py-4 rounded-2xl shadow-lg transition-all hover:shadow-xl transform hover:-translate-y-1">
             Comenzar mi Test Gratuito 🚀
@@ -56,7 +50,6 @@ export default async function LandingPage() {
           </Link>
         </div>
 
-        {/* Lista de Beneficios del Programa */}
         <div className="pt-12">
           <h3 className="text-2xl font-black text-gray-900 mb-8">Todo lo que incluye tu programa</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
