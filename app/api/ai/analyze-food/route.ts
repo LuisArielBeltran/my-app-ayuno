@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { prompt, imageBase64, email, chatHistory, currentMeals } = body;
+    const { prompt, imageBase64, email, chatHistory, currentMeals, userLocalTime } = body;
 
     if (!email) {
       return NextResponse.json({ success: false, error: 'Falta el email del usuario para validar consumo' }, { status: 400 });
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // --- CONSULTAR METAS, DIETA Y TIPO DE ENFOQUE DEL USUARIO DESDE LA BD ---
+    // --- CONSULTAR METAS, DIETA Y ENFOQUE DEL USUARIO ---
     const metricsResult = await pool.query(`
       SELECT UM.goal, UM.track_type, UM.diet_type FROM user_metrics UM
       JOIN users U ON UM.user_id = U.id
@@ -107,17 +107,17 @@ export async function POST(req: NextRequest) {
       if (m.diet_type) userDietType = m.diet_type.toLowerCase();
     }
 
-    // Obtener la hora actual exacta para contextualizar el análisis
-    const horaActual = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    // Usar la hora local enviada por el dispositivo del usuario (respeta el país en el que esté)
+    const horaExacta = userLocalTime || new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 
-    // --- LLAMADA A GEMINI CON CONTEXTO Y PERFIL ADAPTATIVO ESTRICTO ---
+    // --- LLAMADA A GEMINI CON INSTRUCCIONES ESTRICTAS ---
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3-flash-preview',
       systemInstruction: `
         Eres el coach experto en ayuno intermitente, nutrición clínica, deportiva y adaptativa de la aplicación "TIENES EL CONTROL".
         Tu tono es motivador, empático, profesional y analítico.
 
-        CONTEXTO TEMPORAL ACTUAL: Son las ${horaActual} horas.
+        CONTEXTO TEMPORAL EXACTO (Hora local del usuario): Son las ${horaExacta} horas.
         
         PERFIL NUTRICIONAL Y META DEL USUARIO:
         - Meta Principal: "${userGoal}"
@@ -125,9 +125,9 @@ export async function POST(req: NextRequest) {
         - Perfil Dietético: "${userDietType.toUpperCase()}"
 
         REGLAS ESTRICTAS PARA EL ANÁLISIS DE PLATOS Y FOTOS:
-        1. ADAPTABILIDAD AL PLAN: 
+        1. ADAPTABILIDAD AL PLAN Y HORA: 
            - Si el usuario está en un plan de ganancia muscular / volumen limpio (o si su meta incluye "masa muscular"), NUNCA digas que la comida "rompe el ayuno" ni critiques la comida por tener hidratos o calorías. Su objetivo es nutrirse y crecer muscularmente. Valora el aporte proteico, los carbohidratos complejos y la calidad calórica para su volumen.
-           - Si el usuario está en un plan de pérdida de grasa con ayuno, evalúa si rompe el ayuno respetando la hora actual y su ventana.
+           - Ten en cuenta la hora actual (${horaExacta} horas) para saber qué tipo de comida es (ej. cena nocturna, almuerzo, etc.) y adecuar tu análisis nutricional.
         2. PERFIL DIETÉTICO:
            - OMNÍVORO: Puede consumir fuentes de proteína animal y vegetal de manera equilibrada.
            - VEGETARIANO: Excluye carnes, pescados y mariscos. Consume huevos, lácteos y vegetales.
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
     });
 
     let finalPromptText = userText;
-    let contextString = `[CONTEXTO DEL SISTEMA]\nHora actual: ${horaActual}\nMeta del usuario: ${userGoal} (Enfoque: ${trackType})\n\n`;
+    let contextString = `[CONTEXTO DEL SISTEMA]\nHora local del usuario: ${horaExacta}\nMeta del usuario: ${userGoal} (Enfoque: ${trackType})\n\n`;
 
     if (currentMeals) {
       const comidasRegistradas = Object.entries(currentMeals)
