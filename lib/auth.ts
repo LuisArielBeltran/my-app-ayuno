@@ -18,17 +18,21 @@ export const authOptions = {
         try {
           const cleanEmail = credentials.email.toLowerCase().trim();
 
+          // 1. Buscar el usuario en la base de datos de Railway
           const result = await pool.query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
           if (result.rows.length === 0) {
-            return null;
+            return null; // Usuario no encontrado
           }
 
           const user = result.rows[0];
+
+          // 2. Comparar la contraseña ingresada con el hash de la base de datos
           const isValid = await bcrypt.compare(credentials.password, user.password);
           if (!isValid) {
-            return null;
+            return null; // Contraseña incorrecta
           }
 
+          // 3. Retornar el objeto de usuario autorizado para crear la sesión
           return {
             id: String(user.id),
             email: user.email,
