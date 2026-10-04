@@ -2,36 +2,39 @@
 import { useState } from 'react';
 import { compressAndResizeImage } from '@/lib/imageUtils';
 
-export default function FoodAnalyzer() {
+export default function FoodAnalyzer({ email }: { email: string }) {
   const [loading, setLoading] = useState(false);
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysisText, setAnalysisText] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Mostrar previsualización local en el teléfono del usuario
+    // Mostrar previsualización local en el dispositivo del usuario
     setPreview(URL.createObjectURL(file));
     setLoading(true);
-    setAnalysis(null);
+    setAnalysisText(null);
 
     try {
-      // 1. Comprimir en el cliente (sin saturar Railway)
+      // 1. Comprimir y reducir la imagen en el cliente (< 720x720)
       const compressedBase64 = await compressAndResizeImage(file);
 
-      // 2. Enviar a la API de análisis de IA
+      // 2. Enviar a la API de análisis de IA incluyendo el email y la imagen optimizada
       const res = await fetch('/api/ai/analyze-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: compressedBase64 }),
+        body: JSON.stringify({ 
+          imageBase64: compressedBase64,
+          email: email || (typeof window !== 'undefined' ? localStorage.getItem('user_email') : '') || 'usuario@ayuno.com'
+        }),
       });
 
       const data = await res.json();
       if (data.success) {
-        setAnalysis(data.analysis);
+        setAnalysisText(data.reply || data.text);
       } else {
-        alert('Error al analizar la imagen: ' + data.error);
+        alert('Error al analizar la imagen: ' + (data.error || data.reply));
       }
     } catch (err) {
       console.error('Error:', err);
@@ -45,7 +48,7 @@ export default function FoodAnalyzer() {
     <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm mx-auto mb-6">
       <div className="mb-4 text-center">
         <h2 className="text-lg font-bold text-gray-800">📸 Nutricionista IA</h2>
-        <p className="text-xs text-gray-500">Sube o fotografía tu plato para saber si rompe el ayuno</p>
+        <p className="text-xs text-gray-500">Sube o fotografía tu plato para analizarlo con tu coach</p>
       </div>
 
       {/* Botón de Cámara / Selector de Archivos */}
@@ -71,22 +74,20 @@ export default function FoodAnalyzer() {
       {/* Estado de Carga */}
       {loading && (
         <div className="text-center py-6 text-xs text-indigo-600 font-semibold animate-pulse">
-          Analizando composición metabólica con IA...
+          Optimizando imagen y analizando composición metabólica con IA...
         </div>
       )}
 
       {/* Resultado de la IA */}
-      {analysis && (
-        <div className={`mt-4 p-4 rounded-xl border ${analysis.breaks_fast ? 'bg-red-50 border-red-200 text-red-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
+      {analysisText && (
+        <div className="mt-4 p-4 rounded-xl border bg-indigo-50 border-indigo-200 text-indigo-900">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl">{analysis.breaks_fast ? '❌' : '✅'}</span>
+            <span className="text-xl">🤖</span>
             <span className="font-bold text-xs uppercase tracking-wider">
-              {analysis.breaks_fast ? 'Rompe el ayuno' : 'Permitido en ayuno'}
+              Análisis del Coach IA
             </span>
           </div>
-          <p className="text-xs mb-1"><strong>Detectado:</strong> {analysis.food_detected}</p>
-          <p className="text-xs mb-2"><strong>Análisis:</strong> {analysis.explanation}</p>
-          <p className="text-[11px] italic opacity-80">💡 {analysis.suggestion}</p>
+          <p className="text-xs leading-relaxed whitespace-pre-line">{analysisText}</p>
         </div>
       )}
     </div>
